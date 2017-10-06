@@ -1,0 +1,24 @@
+* Why doesn't lima allow keyword operators (like x in y)?
+	* This can cause confusing problems when a variable of the same name is declared in scope, e.g. if b is an operator
+		var list = {a b c} ;; is a list of one value
+		var list = {a b} ;; could be a list of two values...
+
+* Any operators that need to operate on all values in the same way shouldn't be overloadable (= | ?? round-parens)
+* the square bracket operator is special because you want to be able to do stuff like object[!A] without making it a [! operator all the time
+
+* All objects in Lima modules should be able to access all members (including private ones) so the programmer has full control over how they want to modularize their code. Doesn't make sense to necessarily force them to put functionality in static classes or something. Also, if they're all in the same file, you ensure that it really is part of the same project. You also limit the scope to the amount that a programmer is willing to put in to a single file.
+
+
+* There is no difference between compile time paths and runtime paths
+	* Just like there's no difference between compile time and runtime in general
+	* lima will be built into a separate build folder in the directory of the main lima source file
+
+* Object resurrection is disallowed because of:
+	* ambiguities about when to run the destructor
+	* confusing code that comes out of it
+
+* Difference between privilaged and non-privilaged members is necessary because without such a distinction, there would be no way of creating the right namespaces to have a hashmap, for example. You would have to always use the bracket-operator for hashmap members, and the dot operator for the hashmap's methods and such
+	* Even that may not be enough, because even the underlying object that holds the hashmap's values should have a length
+	* It just gets you deeper and deeper into trouble if you combine those namespaces
+
+* changing lazyUnmake (which allowed a variable's constructor - and thus garbage colletion - to be done sometime after the variable can technically be destroyed) to be an attribute of the destructor instead of of individual variables, since a constructor either can or cannot be lazy. No reason to make the programmer decide every time they create a variable.

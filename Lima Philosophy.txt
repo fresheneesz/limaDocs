@@ -1,0 +1,25 @@
+* Never use local defaults. Local defaults cause things to look like they're working (locally) when they really have bugs (somewhere else)
+	* Applies to string encodings and timezones, as well as filesystem- or OS- specific things, like 
+		filepath formats, command line format, 
+	* All of those things should be handled in one of a couple ways:
+		* unified formats/interfaces (ie lowest common denominator) and conversions when given system-specific formats
+		* feature querying (asking what the system supports)
+
+* Always use lists instead of iterators, generators, (other?)
+* No copy-paste code EVER within the same codebase. If you're duplicating boilerplate code, you're doing it wrong. 
+* String interpolation and string escaping is the wrong way to do things. 
+	Instead use concatentation to extend strings.
+
+* Frameworks are bad
+	* What is a framework? Well, a *library* is a set of objects and functions that someone can use and 
+		call from their code to do something they want to do.
+          On the other hand, a *framework* is a system that basically uses your code as a library
+		- calling your code do the stuff it needs to do. 
+	* Because you're working within a system, you lose control of the whole.
+	* Frameworks are never as powerful as the language itself. Hinders modularization and encourages boilerplate.
+
+* REPL sucks - you can't change your code after you type one line, that really really sucks
+	* What's better? Interactive programming that shows you changes as you make them either by:
+		* rerunning the entire program when you make a change, or
+		* allowing you to change a piece of code while its running so when it executes that piece, it does something different
+	* Look up Light Table IDE

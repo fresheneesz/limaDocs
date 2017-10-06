@@ -1,0 +1,830 @@
+<!DOCTYPE HTML PUBLIC "-;;W3C;;DTD HTML 4.01;;EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	
+	<link rel="shortcut icon" href="" type="image/x-icon">
+	<title>The LiON data-interchange format</title>
+	
+	<script src="prettify/prettify_modified_for_lima.js" type="text/javascript"></script>
+	<link rel="stylesheet" type="text/css" href="prettify/prettify.css" />
+	
+	<script type="text/javascript" src="jquery.js"></script>
+	
+	<style type="text/css">
+		body
+		{	background-image:url(white%20sidestriped%20bg%20light.gif);
+			margin:auto;
+		}
+		body {
+			max-width:1000px;				
+		}
+		#header {
+			max-width:1000px;				
+		}
+		
+		.loadingGif {
+			position: fixed;
+			top: 0; left: 0;	
+		}
+			.loadingGif img {
+				width: 80px;
+			}
+		
+		body, .noncode
+		{	font-family: helvetica,arial,freesans,clean,sans-serif ;
+			line-height: 1.4;
+			font-size:14px;
+		}
+		
+		h2
+		{	margin:0 0 7px 0;
+		}
+		h5
+		{	margin:5px 0 0 0;
+		}
+		p, div.example
+		{	margin:10px 0;
+		}
+		td
+		{	padding-top:5px;
+		}
+		th
+		{	font-size:12px;
+		}
+		
+		code
+		{	font-size:12px;
+			line-height: 100%;
+		}
+		
+		.innerWord {
+			color:rgb(200,0,0);
+		}
+		.forceComment code, .forceComment {
+			color: grey;
+		}
+		
+		.copiedNote {	
+			color: rgb(70,70,70);
+		}
+		.copiedNoteDuplicate {
+			color: rgb(140,140,140);
+		}
+		
+		.mainBox, .normalBox, .codeBox, .codeArea, .subBox1, .subBox2 
+		{	border:solid 1px rgb(230,230,230);
+		}
+		.mainBox, .normalBox, .codeBox, .subBox1, .subBox2 
+		{	margin: 10px auto;
+			padding: 3px 10px;
+		}
+		.mainBox, .normalBox, .subBox1, .subBox2 
+		{	background-color:#FFFFFF;
+		}
+		.codeBox, .codeArea
+		{	background-color:#F7F7F7;
+		}
+		
+		.example .collapsable_header {
+			font-size: 11px;
+			color: rgb(150, 80, 80);	
+			font-family: "Comic Sans MS";
+		}
+		
+		.nearTop {
+			vertical-align: top;
+			padding-top: 50px;
+		}
+		
+		.clickable
+		{	cursor:pointer;
+		}
+			.clickable:hover
+			{	text-decoration:underline;
+			}
+		
+		.innerBorder
+		{	border: 1px solid black;
+		}
+		.unbreakable
+		{	white-space: nowrap;
+		}
+		
+		#openAll, #closeAll
+		{	text-decoration: underline;
+			font-style: italic;
+			cursor: pointer;
+		}
+		#openAll:hover, #closeAll:hover
+		{	font-style: normal;
+		}
+		
+		.inlineList li
+		{	display: inline;
+		}
+		
+		#header {
+			/*position: fixed;*/
+			background-color: lightgray;	
+			margin-top: 2px;
+			padding: 0px 0;
+			width: 100%;
+		}
+			#fixedHeader {
+				position: fixed;
+				display: inline;
+				margin-left: 70px;
+				background-color: lightgray;
+			}
+				#contentsContainer {
+					position: relative;	
+				}	
+					#contents {
+						position: absolute;
+						left: 0px;
+						top: -15px;
+						border: 1px solid grey;
+					}
+						#contents li {	
+							cursor: pointer;
+						}
+							#contents li .contentsButton:hover {	
+								background-color: white;
+							}
+					
+				#contentsButton {
+					font-size: 20px;
+					border: 1px solid gray;	
+					margin: 4px 90px;
+					cursor: pointer;
+					padding: 0px 5px;
+				}
+				#contents, #contentsButton {
+					background-color: rgb(240,240,240);					
+				}
+					.rightClickMenu {
+						background-color: white;
+						border: 1px solid gray;
+						cursor: pointer;
+					}
+			
+			#topTitle {
+				font-size: 31px;
+				font-weight: bold;	
+				display: inline;
+				margin-left: 5px;
+			}
+			
+		#top {
+			/*margin-top: 45px;*/
+				
+		}
+		
+		.operationsLevel {
+			font-size: 12px;		
+			font-weight: bold;
+			text-align: right;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="header">
+		<div id="topTitle">LiON data-interchange format</div>
+	</div>
+
+	<div class=loadingGif><img src="loading_transparent_4.gif"></div>
+
+	
+	<div class="mainBox mainTitle" title="Introduction">
+		<p>	LiON (Lima Object Notation) is a lightweight data-interchange format. 
+			Its easy for humans to read and write and easy for machines to parse and generate. 
+			Its based on <a href="http://www.json.org/">JSON</a> and Lima object and string syntax.
+		</p>
+		
+		<p>	Of course why create a new format if there aren't benefits.
+			<ul><li>LiON can represent objects with arbitrary values as keys.</li>
+				<li>The syntax is more compact for objects with string keys.</li>
+				<li>Has a unified syntax for objects and lists</li>
+			</ul>
+		</p>
+		
+		<p>	A LiON value can be composed of a few different things.
+			The diagram below describes how values can be created.
+		</p>
+		
+		<p style="text-align:center;">	<img src="LiON.png">
+		</p>
+		
+		<p>	Note that <code>{string=&lt;value>}</code> is the same as <code>{"string":&lt;value>}</code>.
+			Also note that the "hexadecimal number" in a string represents a LimaEncoding character (usually the same as a unicode codepoint).
+			E.g. <code>""![2B 31]</code> represents the string <code>"+1"</code>.
+		</p>
+		
+		<p> When sending or storing LiON, you can simply store a list or map of values separated by whitespace. 
+            Unlike JSON, you don't need surrounding curly-braces. For example:
+            <code>0 "zero" [] {} zero:"0"</code> represents <code>{0:0 1:"zero" 2:[] 3:{} zero:"0"}</code> 
+            whereas
+            <code>{0 "zero" [] {} zero:"0"}</code> represents <code>{0: {0:0 1:"zero" 2:[] 3:{} zero:"0"} }</code> 
+		</p>
+	</div>
+	
+	
+	
+	<script type="text/javascript">
+		
+		function in_array(needle, haystack, argStrict)
+		{	var test;
+			if(argStrict)
+			{	test = function(a,b)
+				{	return a===b;
+				};
+			}else
+			{	test = function(a,b)
+				{	return a==b;
+				};
+			}
+			
+			for(n in haystack)
+			{	if(test(needle,haystack[n]))
+				{	return true;
+				}
+			}
+			return false;
+		}
+		// objectList is for internal use only (to prevent infinite loops)
+		function printr(theObj, maxdepth, curDepth)
+		{	if(curDepth == undefined)
+			{	curDepth=0
+			}
+			if(maxdepth != undefined)
+			{	if(curDepth >= maxdepth)
+				{	return "more...";
+				}	
+			}
+			
+			var isObj;
+			if((typeof theObj) == "array" || (typeof theObj) == "object" || (typeof theObj) == "function")
+			{	isObj = true;
+			}else
+			{	isObj = false;
+			}
+			
+			if(isObj)
+		    {	result = "<ul>";
+		    	for(var p in theObj)
+				{	result += "<li>["+p+"] => "+printr(theObj[p])+"</li>";
+		    	}
+		    	result += "</ul>";
+		    	return result;
+		  	}
+		  	else
+		  		return theObj;
+		}
+		function regex_escape(text) 
+		{	if (!arguments.callee.sRE)
+			{	var specials = ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'];
+				arguments.callee.sRE = new RegExp('(\\' + specials.join('|\\') + ')', 'g');
+			}
+			return text.replace(arguments.callee.sRE, '\\$1');
+		}
+		function replaceAll(theString, replaceThis, withThis)
+		{	return theString.replace(new RegExp(regex_escape(replaceThis), 'g'), withThis);
+		}
+		function trimFront(stringToTrim)
+		{	return stringToTrim.replace(/^\s+/g,"");
+		}
+		function trimBack(stringToTrim)
+		{	return stringToTrim.replace(/\s+$/g,"");
+		}
+		function trimBackSpacesAndTabs(stringToTrim)
+		{	return stringToTrim.replace(/[ \t\r]+$/g,"");
+		}
+		function trim(stringToTrim)
+		{	return stringToTrim.replace(/^\s+|\s+$/g,"");
+		}
+		$.fn.unwrap = function()
+		{	$(this).parent().replaceWith
+			(	$(this).parent().html()
+			);
+		};
+		function realhtml(jqueryElement, callback)
+		{	if(jQuery.browser.msie == true)
+			{	jqueryElement.wrap("<pre></pre>");
+				setTimeout(function()
+				{	callback(jqueryElement.html());
+					jqueryElement.unwrap();	
+				},0);
+			}else
+			{	callback(jqueryElement.html());
+			}
+		}
+		function arraykeys(array)
+		{	var keys = [];
+			for(e in array)
+			{	keys[keys.length] = e;
+			}
+			return keys;
+		}
+			
+		function getCollapsableElements(elements)
+		{	return {	
+				header: elements.children(".collapsable_header_elipsis"), 
+				content: elements.parent().children(".collapsable_content")
+			};
+		}
+			
+		function openCollapsableElements(elements)
+		{	var parts = getCollapsableElements(elements);
+			parts.header.hide();
+			parts.content.show();
+		}
+		function closeCollapsableElements(elements)
+		{	var parts = getCollapsableElements(elements);
+			parts.header.show();
+			parts.content.hide();
+		}	
+		
+		var parserTerms = // terms used to describe basic constructs the parser uses to parse a lima program
+		{	"Lvalue":"",	// Left value
+			"Rvalue":"",	// Right value
+			"Ivalue":"",	// Initialized Lvalue
+			"statement":"",
+			"statements":"",
+			"opsym":"",		// operator symbol
+			"parameters":"parameters",
+			"Qcond":"Qcond",	// ? condition
+			"Qlist":"Qlist",	// list of ? conditions
+			"condition":"condition",	
+			"whileEndStatements": "end-statements",
+			"if_else":"else",
+			"integer":"",
+			"alphanumeric":"",
+			"base":"",
+			"decimal":"",
+			"declaration":"",
+			"escapedCharacters":"",
+			"word":"",
+			"definitionBlock":"definition-block",
+			"variableName":"",
+			"cullBlock":"cull-block",		
+			"sliceConditional":"",
+			"entryPoint":"entry-point"
+		};
+		var wordTerms = // terms used to describe concepts in Lima
+		{	"element":"",
+			"object":"",
+			"listobj":"list-object",
+			"member":"", "pseudoMember":"",
+			"module":"",
+			"private":"", 
+			"eager":"",
+			"final":"",
+			"ready":"",
+			"threadlocal":"",
+			"external":"",
+			"constant":"",
+			"typeValue":"",
+			"characters":"",
+			"privileged":"privileged",
+			"operatorToken":"",
+			"label":"",
+			"threadPrio":"",
+			"target":"",
+			"argument":"",
+			"parameter":"",
+			"limaPath":"Lima path",
+			"catchFinallyBlock":"finally block", 
+			"catchExceptionBlock":"catch-exception block",
+			"sideEffectSurpression":"Side-effect surpression",
+			"exceptionNamespace": "exception-namespace",
+			"splat":"",
+			"mapStatement":"",
+			bracketBlock:"bracket-block",
+			indentationBlock: "indentation-blocks",
+			undentedCharacter: "undented character",
+			argument: "",
+			implicitVariable: "implicitly-declared variable"
+		};
+		var literalWordsA = // literal words that can be used in code (constants, predefined variables/functions/objects, etc)
+		[	"int", "float","double","fra", "floplex","floplexU", "fraplex","fraplexU", 
+			"string",
+			"bool",
+			"type",
+			"contin", 
+			"var",
+			"list",
+			"enum",
+			"fixed", "static",
+			"new", "mal", "del",
+			"typeset",
+			"if", "df", "while", "catch", "thread", "when",
+			"fn", "attribute",
+			"file", "fileT",
+			"dir",
+			"win",
+			"graph", "tree",
+			"ref", 
+			"nil",
+			"time", "cpuTime",
+			"wout", "rin", "rawrin", "sain", "tfor",
+			"deg",
+			"curTime", "curTicks", "ticksPerSecond",
+			"garbo",
+			"endian",
+			"compiler",
+			"rand", "arb",
+			"sign",
+			"log", "integrate", "d", "pd", "lim", "solve",
+			"sizeof",
+			"date",
+			"jump",
+			"false", "true",
+			"hiZ",
+			"const",
+			"use", "mix",
+			"pi",
+			"staticSize", "dynamicSize",
+			"ptr",
+			"complex",
+			"operator",
+			"TPS",
+			"make",
+			"break", "continue",
+			"self",
+			"ret",
+			"unmake",
+			"compare",
+			"override",
+			"parse",
+			"custom",
+			"realCustom",
+			"this"
+		]
+		var literalWordsB = 
+		{	"infinity":"00",
+			"dotOperator":" . ",
+			"complex_im":"im",
+			"complex_re":"re",
+			"postExclamationOperator":"!",
+			"preExclamationOperator":"!",
+			"bracketOperator":"[ ]",
+			"doubleBracketOperator":"[[ ]]",
+			"clawBracketOperator": "{[ ]}",
+			"slice":"slice",
+			"splatOperator":"...",
+			"rangeOperator":"..",
+			"clawOperator":"claw-operator",
+			"nilCoalescer": "nil-coalescense operator"
+		};
+		
+		var attributes = 
+		{	"mutator":{backgroundColor:"rgb(255,225,225)"}
+		};
+		
+		
+		function getCopiedNoteName(classList)
+		{	if(classList.length != 2)
+			{	throw("copiedNote has too many or too few css classes  ("+classList+"), should have just 2");
+			}else if(classList[0] == "copiedNote")
+			{	return classList[1];
+			} else
+			{	classList[0];
+			}
+		}
+		
+		function openPopup(url, width, height, name) {
+			if(name === undefined) name = '';
+		    window.open(url, name, "width="+width+",height="+height);
+		}
+		
+		$(function() {
+			var splitLocation = window.location.href.split('#');
+			
+			try {
+			var createTitleList = function(node, parentNode) {
+				var name = node.attr("title");
+				var liNode = $("<li><div class='contentsButton' value='"+name+"'>"+name+"</div></li>");
+				
+				var contentsButtons = liNode.find('.contentsButton');
+				
+				contentsButtons.click(function() {
+					var theNode = $('div[title="'+name+'"]');	// its fucked up that I can't just use the node thats passed in the upper scope - wtf is going on?
+					if(theNode.is(":visible")) {
+						var topOffset = theNode.offset().top;	
+					} else {
+						var topOffset = parentNode.offset().top;		
+					}
+					
+					window.scrollTo(0,topOffset-50);	
+				});
+				
+				contentsButtons.bind("contextmenu",function(e) {
+    				$('.rightClickMenu').remove();
+					e.preventDefault();
+
+				    var menu = $("<div class=rightClickMenu>Open in New Window</div>");
+				    menu.css({
+						position: 'absolute', left: e.pageX, top: e.pageY
+					});
+					
+					var closeFunction = function() {						
+						menu.remove();
+						$("body").unbind("click",closeFunction);	
+					}
+					menu.click(function() {
+						openPopup(splitLocation[0]+"#"+name, 1000, 1000);
+						closeFunction()
+					});
+					$("body").bind("click",closeFunction);					
+					$('body').append(menu);
+					return false;
+				});
+				
+				return liNode;	
+			};
+				
+			// create contents
+			$(".mainBox.mainTitle").each(function() {
+				var mainNode = $(this);
+				var liNode = createTitleList(mainNode);
+				
+				var subBox1Ol = $('<ul></ul>');
+				$(this).find('.subBox1').each(function() {
+					var subLiNode = createTitleList($(this), mainNode);
+					subBox1Ol.append(subLiNode);	
+				});
+				
+				liNode.append(subBox1Ol);
+				$("#contents").append(liNode);
+			});
+			
+			
+			var menuItem = splitLocation[1];	// grab value after hash
+			$("#contents .contentsButton[value='"+menuItem+"']").click();	// jump to section
+			
+			$("#contentsButton").click(function() {
+				$("#contents").toggle();
+				
+				var closeFunction = function() {
+					$("#contents").hide();
+					$("body").unbind("click",closeFunction);			
+				};
+				$("body").bind("click",closeFunction);
+				return false;
+			});
+			
+			// other stuff			
+			
+			var notesAlreadyCopied = [];
+			$(".copiedNote").each(function()
+			{	var noteName = getCopiedNoteName($(this).attr('class').split(' '));
+				if(noteName in notesAlreadyCopied)
+				{	throw("Multiple duplicate copiedNotes named '"+noteName+"'");
+				}
+				notesAlreadyCopied[notesAlreadyCopied.length] = noteName;
+				var html = $(this).html();
+				
+				$("."+noteName).each(function() {
+					if(!$(this).hasClass("copiedNote")) {
+						$(this).html(html);	
+						$(this).addClass("copiedNoteDuplicate");
+					}
+				});
+				
+			});
+			
+			function createCodeArea()
+			{	$(this).html("<div"+/*" class=codeArea" +*/"><code>"+$(this).html()+"</code></div>");
+				$(this).addClass("unbreakable").addClass("codeArea");
+			}
+			
+			$(	".definitionTable tr td:first-child, "+
+				".methodDefinitionTable tr td:first-child, "+
+				".methodDefinitionTable2 tr td:first-child"
+			).each(createCodeArea);
+			$(".methodDefinitionTable").children().children().children(":nth-child(2)").each(createCodeArea);
+			$(".definitionTable tr td:nth-child(2), .methodDefinitionTable tr td:nth-child(3), .methodDefinitionTable2 tr td:nth-child(2)").addClass("mainBox");
+			
+			$(".methodDefinitionTable").children().prepend("<tr><th>method</th><th>parameters</th><th>Description</th><tr>");
+			$(".methodDefinitionTable2").children().prepend("<tr><th>parameters</th><th>Description</th><tr>");
+			
+			$(".normalTable tr td").addClass("mainBox");
+			$(".normalTable tr td:nth-child(2)").css({"text-align":"center"});
+			$(".normalTable tr td:nth-child(1)").addClass("operationsLevel");
+			
+			
+			$("table").each(function()
+			{	//table	  tbody		tr					td	
+				$(this).children().children(":odd").children().css({"background-color":"rgb(240,255,250)"});
+				$(this).children().children(":even").children().css({"background-color":"rgb(233,247,255)"});
+			});	
+			//$("table:not(td > table) > tbody > tr:odd > td").css({"background-color":"rgb(233,247,255)"});
+			//$("table tr:odd td").css({"background-color":"rgb(233,247,255)"});
+			//("table tr:even td").css({"background-color":"rgb(240,255,250)"});			
+			
+			$(".more").html("<b class=noncode>. . .</b>");
+			$(".param").each(function()
+			{	$(this).html("<code><i>"+$(this).html()+"</i></code>");
+			});	
+			
+			$(".taba").html("&nbsp;&nbsp;");
+			$(".tab").html("&nbsp;&nbsp;&nbsp;");
+			
+			function findMinIndentForCodeSpace(text) {
+				var t = text.split('');
+				var result = "";
+				
+				var foundFirstNewline = false;
+				for(n in t) {
+					var c = t[n];
+					if(foundFirstNewline) {
+						if(c===' ' || c==="\t" || c==="\r") {
+							result += c;
+						}	else {
+							break;
+						}
+					} else if(c === "\n") {
+						foundFirstNewline = true;	
+					} 
+				}
+				return result;
+			}
+			
+			
+			$("code").each(function()
+			{	var minIndent = findMinIndentForCodeSpace($(this).html());
+				
+				var result = replaceAll(trim(trimBackSpacesAndTabs($(this).html())), "\n", "<br>");
+				result = replaceAll(result, "<br>"+minIndent, "<br>");
+				result = replaceAll(result, "{\t", "{&nbsp;&nbsp;");
+				result = replaceAll(result, "[\t", "[&nbsp;&nbsp;");
+				result = replaceAll(result, "\t", "&nbsp;&nbsp;&nbsp;");
+				$(this).html(result);
+				
+				/*var parentDiv = $(this).parent('div');		// *if* the parent is a div, this will have a node
+				if(	(parentDiv.parent('td').size() === 0 				// not directly under a table row, or
+						|| ! parentDiv.parent('td').is(':first-child')		// not in the first table row, or
+						|| ! parentDiv.closest('table').hasClass('definitionTable')	// that table is not a definitionTable
+					) && $(this).siblings().size() === 0 )	{	// the code area has no siblings
+					
+					parentDiv.addClass('codeBox');
+				}
+				*/
+			});
+			
+			$("code:not([pretty=no])").addClass("prettyprint");	// it seems this does something a bit asynchronously or something - make sure it runs far above prettyPrint(), or make some kind of lock so that prettyprint doesn't run until this is totally complete
+			//$("code").addClass("lang-lima");
+
+			$('a').attr("target","external");	// every link is a new window
+			
+			var DEBUG = false;
+			if(DEBUG)
+			{	var fullList = arraykeys(parserTerms).concat(arraykeys(wordTerms), literalWordsA, arraykeys(literalWordsB), ["param", "more"]);
+
+				$("span").each(function()
+				{	if(false == (in_array($(this).attr("class"), fullList)) )
+					{	alert($(this).attr("class"));
+					}
+				});
+			}
+			
+			function flattenToRealWord(assArray, key)	// flattens a key and a value into just a value
+			{	var realWord;
+				if(assArray[key] == "")
+				{	realWord = key;
+				}else
+				{	realWord = assArray[key];
+				}
+				return realWord;
+			}
+			
+			$(".subBox2").each(function(){	$(this).prepend("<h4>"+$(this).attr("title")+"</h4>");});	// titles
+			
+			
+			
+			// start uncollapsed
+			function setupCollapsable(element, header, title, openAtStart, mainElementTag) {	
+				if(openAtStart === undefined) openAtStart = true;
+				if(header === undefined) header = element.get(0).tagName;
+				if(mainElementTag === undefined) mainElementTag = element.get(0).tagName;
+				
+				element.html
+				(	"<"+header+" class='collapsable_header clickable'>"+title+"<span class='collapsable_header_elipsis' style='display:none;'>...</span></"+header+">"+
+					"<"+mainElementTag+" class='collapsable_content'>"+element.html()+"</"+mainElementTag+">"
+				);
+				
+				element.children(".collapsable_header").click(function()
+				{	var parts = getCollapsableElements($(this));
+					parts.header.toggle();
+					parts.content.toggle();
+				});
+				
+				
+				if(!openAtStart) {
+					element.children(".collapsable_header").click();	
+				}
+			}
+			
+			
+			//* An attempt to make the headings collapsable
+			
+			$(".mainBox.mainTitle").each(function(){	setupCollapsable($(this), "h2", $(this).attr("title")); });
+			$(".subBox1").each(function(){	setupCollapsable($(this), "h3", $(this).attr("title"));});
+			
+			$(".example").each(function(){	
+				setupCollapsable($(this), undefined, 'examples', false);
+				$(this).addClass("codeBox");	
+			});
+			$(".details").each(function(){	
+				setupCollapsable($(this), undefined, 'details', false);
+			});
+			
+			
+			$('.mainBox[title="Concepts"] li').each(function(){	setupCollapsable($(this), 'h3', $(this).attr("title"), false, 'div');});
+			
+			
+			$("#openAll").click(function()
+			{	openCollapsableElements($(".collapsable_header"));
+			});
+			$("#closeAll").click(function()
+			{	closeCollapsableElements($(".collapsable_header"));
+			});
+			
+			//$(".open").children(".collapsable_header:nth-child(1)").click();
+			
+			prettyPrint(function()	// prettify all stuffs that has the prettyprint class on it
+			{	// Write special words
+				for(n in parserTerms)
+				{	var realWord = flattenToRealWord(parserTerms, n);	
+					$("."+n).each(function()
+					{	var innerWord = $(this).text();
+						if(innerWord=="")
+						{	innerWord = realWord;
+						}
+						$(this).html("<code class=innerWord>"+innerWord+"</code>");
+					});
+				}
+				var temporaryDebugVariable = true;
+				for(n in wordTerms)
+				{	var realWord = flattenToRealWord(wordTerms, n);	
+					$("."+n).each(function()
+					{	var innerWord = $(this).text();
+						//if(temporaryDebugVariable){temporaryDebugVariable = confirm ("'"+innerWord+"'");}
+						if(innerWord=="")
+						{	innerWord = realWord;
+						}
+						$(this).html("<i>"+innerWord+"</i>");
+					});
+				}
+				for(n in literalWordsA)
+				{	$("."+literalWordsA[n]).each(function()
+					{	$(this).html("<code><b>"+literalWordsA[n]+"</b></code>");
+					});
+				}
+				for(n in literalWordsB)
+				{	var realWord = flattenToRealWord(literalWordsB, n);	
+					$("."+n).each(function()
+					{	$(this).html("<code><b>"+realWord+"</b></code>");
+					});
+				}
+				for(n in attributes)
+				{	$("."+n).each(function()
+					{	$(this).html("<code><b>"+n+"</b></code>");
+						$(this).css(attributes[n]);
+					});
+				}
+				
+				$("#contents .contentsButton[value='"+menuItem+"']").click();	// jump to section again (since things have changed since the last time we jumped)
+				$('.loadingGif').remove(); // done loading
+			});	
+			
+			} catch(e) {
+				try {console.log("Got exception: "+e);}
+				catch(f) {alert(f+" and "+e);};
+			}			
+		});
+		
+		if(jQuery.browser.msie == true)
+		{	$(function()
+			{	$("body").wrapInner
+				(	'<div id="IEsucks"></div>'
+				);
+				$("#IEsucks").hide();
+				$("body").prepend
+				(	'<div style="width:800px;margin-left:20px;">'+
+						'<br>'+
+						"This page doesn't support Internet Explorer. If you'd like to see the page anyway, "+'<span class="clickable" onclick="'+"$('#IEsucks').show();"+'">click here</span>. For a better experience, please upgrade your browser:'+
+						'<ul>'+
+							'<li><a href="www.opera.com">www.opera.com</a></li>'+
+							'<li><a href="www.firefox.org">www.firefox.org</a></li>'+
+						'</ul>'+
+					'</div>'
+				);
+			});
+		}
+	</script>
+</body>
+</html>
+

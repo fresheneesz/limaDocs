@@ -1,0 +1,3206 @@
+<!DOCTYPE HTML PUBLIC "-;;W3C;;DTD HTML 4.01;;EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	
+	<link rel="shortcut icon" href="" type="image/x-icon">
+	<title>The Lima Programming Language</title>
+	
+	<script src="prettify/prettify_modified_for_lima.js" type="text/javascript"></script>
+	<link rel="stylesheet" type="text/css" href="prettify/prettify.css" />
+	
+	<script type="text/javascript" src="jquery.js"></script>
+	
+	<script type="text/javascript">
+		
+		function in_array(needle, haystack, argStrict)
+		{	var test;
+			if(argStrict)
+			{	test = function(a,b)
+				{	return a===b;
+				};
+			}else
+			{	test = function(a,b)
+				{	return a==b;
+				};
+			}
+			
+			for(n in haystack)
+			{	if(test(needle,haystack[n]))
+				{	return true;
+				}
+			}
+			return false;
+		}
+		// objectList is for internal use only (to prevent infinite loops)
+		function printr(theObj, maxdepth, curDepth)
+		{	if(curDepth == undefined)
+			{	curDepth=0
+			}
+			if(maxdepth != undefined)
+			{	if(curDepth >= maxdepth)
+				{	return "more...";
+				}	
+			}
+			
+			var isObj;
+			if((typeof theObj) == "array" || (typeof theObj) == "object" || (typeof theObj) == "function")
+			{	isObj = true;
+			}else
+			{	isObj = false;
+			}
+			
+			if(isObj)
+		    {	result = "<ul>";
+		    	for(var p in theObj)
+				{	result += "<li>["+p+"] => "+printr(theObj[p])+"</li>";
+		    	}
+		    	result += "</ul>";
+		    	return result;
+		  	}
+		  	else
+		  		return theObj;
+		}
+		function regex_escape(text) 
+		{	if (!arguments.callee.sRE)
+			{	var specials = ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'];
+				arguments.callee.sRE = new RegExp('(\\' + specials.join('|\\') + ')', 'g');
+			}
+			return text.replace(arguments.callee.sRE, '\\$1');
+		}
+		function replaceAll(theString, replaceThis, withThis)
+		{	return theString.replace(new RegExp(regex_escape(replaceThis), 'g'), withThis);
+		}
+		function trimFront(stringToTrim)
+		{	return stringToTrim.replace(/^\s+/g,"");
+		}
+		function trimBack(stringToTrim)
+		{	return stringToTrim.replace(/\s+$/g,"");
+		}
+		function trimBackSpacesAndTabs(stringToTrim)
+		{	return stringToTrim.replace(/[ \t\r]+$/g,"");
+		}
+		function trim(stringToTrim)
+		{	return stringToTrim.replace(/^\s+|\s+$/g,"");
+		}
+		$.fn.unwrap = function()
+		{	$(this).parent().replaceWith
+			(	$(this).parent().html()
+			);
+		};
+		function realhtml(jqueryElement, callback)
+		{	if(jQuery.browser.msie == true)
+			{	jqueryElement.wrap("<pre></pre>");
+				setTimeout(function()
+				{	callback(jqueryElement.html());
+					jqueryElement.unwrap();	
+				},0);
+			}else
+			{	callback(jqueryElement.html());
+			}
+		}
+		function arraykeys(array)
+		{	var keys = [];
+			for(e in array)
+			{	keys[keys.length] = e;
+			}
+			return keys;
+		}
+			
+		function getCollapsableElements(elements)
+		{	return {	
+				header: elements.children(".collapsable_header_elipsis"), 
+				content: elements.parent().children(".collapsable_content")
+			};
+		}
+			
+		function openCollapsableElements(elements)
+		{	var parts = getCollapsableElements(elements);
+			parts.header.hide();
+			parts.content.show();
+		}
+		function closeCollapsableElements(elements)
+		{	var parts = getCollapsableElements(elements);
+			parts.header.show();
+			parts.content.hide();
+		}	
+		
+		var parserTerms = // terms used to describe basic constructs the parser uses to parse a lima program
+		{	"Lvalue":"",	// Left value
+			"Rvalue":"",	// Right value
+			"Ivalue":"",	// Initialized Lvalue
+			"statement":"",
+			"statements":"",
+			"opsym":"",		// operator symbol
+			"parameters":"parameters",
+			"Qcond":"Qcond",	// ? condition
+			"Qlist":"Qlist",	// list of ? conditions
+			"condition":"condition",	
+			"whileEndStatements": "end-statements",
+			"if_else":"else",
+			"integer":"",
+			"alphanumeric":"",
+			"base":"",
+			"decimal":"",
+			"declaration":"",
+			"escapedCharacters":"",
+			"word":"",
+			"definitionBlock":"definition-block",
+			"variableName":"",
+			"cullBlock":"cull-block",		
+			"sliceConditional":"",
+			"entryPoint":"entry-point"
+		};
+		var wordTerms = // terms used to describe concepts in Lima
+		{	"element":"",
+			"object":"",
+			"listobj":"list",
+			"member":"", "pseudoMember":"",
+			"module":"",
+			"private":"", 
+			"eager":"",
+			"ready":"",
+			"threadlocal":"",
+			"external":"",
+			"constant":"",
+			"typeValue":"",
+			"characters":"",
+			"readOnly":"read-only",
+			"operatorToken":"",
+			"label":"",
+			"threadPrio":"",
+			"target":"",
+			"argument":"",
+			"parameter":"",
+			"limaPath":"Lima path",
+			"catchElseBlock":"any-exception block", 
+			"catchFinallyBlock":"finally block", 
+			"catchConditionalBlock":"conditional-exception block",
+			"sideEffectSurpression":"Side-effect surpression",
+			"exceptionNamespace": "exception-namespace",
+			"splat":"",
+			"mapStatement":"",
+			bracketBlock:"bracket-block",
+			indentationBlock: "indentation-blocks",
+			undentedCharacter: "undented character",
+			argument: "",
+			implicitVariable: "implicitly-declared variable"
+		};
+		var literalWordsA = // literal words that can be used in code (constants, predefined variables/functions/objects, etc)
+		[	"int","intU", "float","floatU","double","doubleU","fra","fraU", "floplex","floplexU", "fraplex","fraplexU", 
+			"string",
+			"bool",
+			"type",
+			"contin", 
+			"var",
+			"list",
+			"enum",
+			"fixed", "static",
+			"new", "mal", "del",
+			"typeset",
+			"if", "df", "while", "catch", "thread", "when",
+			"fn", "attribute",
+			"file", "fileT",
+			"dir",
+			"win",
+			"graph", "tree",
+			"ref", 
+			"nil",
+			"time",
+			"wout", "rin", "rawrin", "sain", "tfor",
+			"deg",
+			"curTime", "curTicks", "ticksPerSecond",
+			"garbo",
+			"endian",
+			"compiler",
+			"rand", "arb",
+			"sign",
+			"log", "integrate", "d", "pd", "lim", "solve",
+			"sizeof",
+			"date",
+			"jump",
+			"false", "true",
+			"hiZ",
+			"const",
+			"use", "herit",
+			"pi",
+			"staticSize", "dynamicSize",
+			"ptr",
+			"complex",
+			"operator",
+			"TPS",
+			"make",
+			"break", "continue",
+			"self",
+			"ret",
+			"destruct",
+			"compare",
+			"override",
+			"parse",
+			"custom",
+			"this",
+			"thiself"
+		]
+		var literalWordsB = 
+		{	"infinity":"00",
+			"dotOperator":" . ",
+			"complex_im":"im",
+			"complex_re":"re",
+			"postExclamationOperator":"!",
+			"preExclamationOperator":"!",
+			"bracketOperator":"[ ]",
+			"doubleBracketOperator":"[[ ]]",
+			"clawBracketOperator": "{[ ]}",
+			"listSlice":"list slice",
+			"splatOperator":"...",
+			"rangeOperator":"..",
+			"clawOperator":"claw-operator",
+			"nilCoalescer": "nil-coalescense operator"
+		};
+		
+		var attributes = 
+		{	"mutator":{backgroundColor:"rgb(255,225,225)"}
+		};
+		
+		
+		function getCopiedNoteName(classList)
+		{	if(classList.length != 2)
+			{	throw("copiedNote has too many or too few css classes  ("+classList.length+"), should have just 2");
+			}else if(classList[0] == "copiedNote")
+			{	return classList[1];
+			} else
+			{	classList[0];
+			}
+		}
+		
+		function openPopup(url, width, height, name) {
+			if(name === undefined) name = '';
+		    window.open(url, name, "width="+width+",height="+height);
+		}
+		
+		$(function() {
+			var splitLocation = window.location.href.split('#');
+			
+			try {
+			var createTitleList = function(node, parentNode) {
+				var name = node.attr("title");
+				var liNode = $("<li><span class='contentsButton' value='"+name+"'>"+name+"</span></li>");
+				
+				var contentsButtons = liNode.find('.contentsButton');
+				
+				contentsButtons.click(function() {
+					var theNode = $('div[title="'+name+'"]');	// its fucked up that I can't just use the node thats passed in the upper scope - wtf is going on?
+					if(theNode.is(":visible")) {
+						var topOffset = theNode.offset().top;	
+					} else {
+						var topOffset = parentNode.offset().top;		
+					}
+					
+					window.scrollTo(0,topOffset-50);	
+				});
+				
+				contentsButtons.bind("contextmenu",function(e) {
+    				e.preventDefault();
+
+				    var menu = $("<div class=rightClickMenu>Open in New Window</div>");
+				    menu.css({
+						position: 'absolute', left: e.pageX, top: e.pageY
+					});
+					
+					var closeFunction = function() {						
+						menu.remove();
+						$("body").unbind("click",closeFunction);	
+					}
+					menu.click(function() {
+						openPopup(splitLocation[0]+"#"+name, 1000, 1000);
+						closeFunction()
+					});
+					$("body").bind("click",closeFunction);					
+					$('body').append(menu);
+					return false;
+				});
+				
+				return liNode;	
+			};
+				
+			// create contents
+			$(".mainBox.mainTitle").each(function() {
+				var mainNode = $(this);
+				var liNode = createTitleList(mainNode);
+				
+				var subBox1Ol = $('<ul></ul>');
+				$(this).find('.subBox1').each(function() {
+					var subLiNode = createTitleList($(this), mainNode);
+					subBox1Ol.append(subLiNode);	
+				});
+				
+				liNode.append(subBox1Ol);
+				$("#contents").append(liNode);
+			});
+			
+			
+			var menuItem = splitLocation[1];	// grab value after hash
+			$("#contents .contentsButton[value='"+menuItem+"']").click();	// jump to section
+			
+			$("#contentsButton").click(function() {
+				$("#contents").toggle();
+				
+				var closeFunction = function() {
+					$("#contents").hide();
+					$("body").unbind("click",closeFunction);			
+				};
+				$("body").bind("click",closeFunction);
+				return false;
+			});
+			
+			// other stuff			
+			
+			var notesAlreadyCopied = [];
+			$(".copiedNote").each(function()
+			{	var noteName = getCopiedNoteName($(this).attr('class').split(' '));
+				if(noteName in notesAlreadyCopied)
+				{	throw("Multiple duplicate copiedNotes named '"+noteName+"'");
+				}
+				notesAlreadyCopied[notesAlreadyCopied.length] = noteName;
+				var html = $(this).html();
+				
+				var nodes = $("."+noteName);
+				nodes.addClass("copiedNote");
+				nodes.html(html);
+			});
+			
+			function createCodeArea()
+			{	$(this).html("<div"+/*" class=codeArea" +*/"><code>"+$(this).html()+"</code></div>");
+				$(this).addClass("unbreakable").addClass("codeArea");
+			}
+			
+			$(	".definitionTable tr td:first-child, "+
+				".methodDefinitionTable tr td:first-child, "+
+				".methodDefinitionTable2 tr td:first-child"
+			).each(createCodeArea);
+			$(".methodDefinitionTable").children().children().children(":nth-child(2)").each(createCodeArea);
+			$(".definitionTable tr td:nth-child(2), .methodDefinitionTable tr td:nth-child(3), .methodDefinitionTable2 tr td:nth-child(2)").addClass("mainBox");
+			
+			$(".methodDefinitionTable").children().prepend("<tr><th>method</th><th>parameters</th><th>Description</th><tr>");
+			$(".methodDefinitionTable2").children().prepend("<tr><th>parameters</th><th>Description</th><tr>");
+			
+			$(".normalTable tr td").addClass("mainBox");
+			$(".normalTable tr td:nth-child(2)").css({"text-align":"center"});
+			$(".normalTable tr td:nth-child(1)").addClass("operationsLevel");
+			
+			
+			$("table").each(function()
+			{	//table	  tbody		tr					td	
+				$(this).children().children(":odd").children().css({"background-color":"rgb(240,255,250)"});
+				$(this).children().children(":even").children().css({"background-color":"rgb(233,247,255)"});
+			});	
+			//$("table:not(td > table) > tbody > tr:odd > td").css({"background-color":"rgb(233,247,255)"});
+			//$("table tr:odd td").css({"background-color":"rgb(233,247,255)"});
+			//("table tr:even td").css({"background-color":"rgb(240,255,250)"});			
+			
+			$(".more").html("<b class=noncode>. . .</b>");
+			$(".param").each(function()
+			{	$(this).html("<code><i>"+$(this).html()+"</i></code>");
+			});	
+			
+			$(".taba").html("&nbsp;&nbsp;");
+			$(".tab").html("&nbsp;&nbsp;&nbsp;");
+			
+			function findMinIndentForCodeSpace(text) {
+				var t = text.split('');
+				var result = "";
+				
+				var foundFirstNewline = false;
+				for(n in t) {
+					var c = t[n];
+					if(foundFirstNewline) {
+						if(c===' ' || c==="\t" || c==="\r") {
+							result += c;
+						}	else {
+							break;
+						}
+					} else if(c === "\n") {
+						foundFirstNewline = true;	
+					} 
+				}
+				return result;
+			}
+			
+			
+			$("code").each(function()
+			{	var minIndent = findMinIndentForCodeSpace($(this).html());
+				
+				var result = replaceAll(trim(trimBackSpacesAndTabs($(this).html())), "\n", "<br>");
+				result = replaceAll(result, "<br>"+minIndent, "<br>");
+				result = replaceAll(result, "{\t", "{&nbsp;&nbsp;");
+				result = replaceAll(result, "[\t", "[&nbsp;&nbsp;");
+				result = replaceAll(result, "\t", "&nbsp;&nbsp;&nbsp;");
+				$(this).html(result);
+				
+				/*var parentDiv = $(this).parent('div');		// *if* the parent is a div, this will have a node
+				if(	(parentDiv.parent('td').size() === 0 				// not directly under a table row, or
+						|| ! parentDiv.parent('td').is(':first-child')		// not in the first table row, or
+						|| ! parentDiv.closest('table').hasClass('definitionTable')	// that table is not a definitionTable
+					) && $(this).siblings().size() === 0 )	{	// the code area has no siblings
+					
+					parentDiv.addClass('codeBox');
+				}
+				*/
+			});
+			
+			$("code:not([pretty=no])").addClass("prettyprint");	// it seems this does something a bit asynchronously or something - make sure it runs far above prettyPrint(), or make some kind of lock so that prettyprint doesn't run until this is totally complete
+			//$("code").addClass("lang-lima");
+
+
+			
+			var DEBUG = false;
+			if(DEBUG)
+			{	var fullList = arraykeys(parserTerms).concat(arraykeys(wordTerms), literalWordsA, arraykeys(literalWordsB), ["param", "more"]);
+
+				$("span").each(function()
+				{	if(false == (in_array($(this).attr("class"), fullList)) )
+					{	alert($(this).attr("class"));
+					}
+				});
+			}
+			
+			function flattenToRealWord(assArray, key)	// flattens a key and a value into just a value
+			{	var realWord;
+				if(assArray[key] == "")
+				{	realWord = key;
+				}else
+				{	realWord = assArray[key];
+				}
+				return realWord;
+			}
+			
+			$(".subBox2").each(function(){	$(this).prepend("<h4>"+$(this).attr("title")+"</h4>");});	// titles
+			
+			
+			
+			// start uncollapsed
+			function setupCollapsable(element, header, title, openAtStart, mainElementTag) {	
+				if(openAtStart === undefined) openAtStart = true;
+				if(header === undefined) header = element.get(0).tagName;
+				if(mainElementTag === undefined) mainElementTag = element.get(0).tagName;
+				
+				element.html
+				(	"<"+header+" class='collapsable_header clickable'>"+title+"<span class='collapsable_header_elipsis' style='display:none;'>...</span></"+header+">"+
+					"<"+mainElementTag+" class='collapsable_content'>"+element.html()+"</"+mainElementTag+">"
+				);
+				
+				element.children(".collapsable_header").click(function()
+				{	var parts = getCollapsableElements($(this));
+					parts.header.toggle();
+					parts.content.toggle();
+				});
+				
+				
+				if(!openAtStart) {
+					element.children(".collapsable_header").click();	
+				}
+			}
+			
+			
+			//* An attempt to make the headings collapsable
+			
+			$(".mainBox.mainTitle").each(function(){	setupCollapsable($(this), "h2", $(this).attr("title")); });
+			$(".subBox1").each(function(){	setupCollapsable($(this), "h3", $(this).attr("title"));});
+			$(".example").each(function(){	
+				setupCollapsable($(this), undefined, 'examples', false);
+				$(this).addClass("codeBox");
+			});
+			$('.mainBox[title="Concepts"] li').each(function(){	setupCollapsable($(this), 'h3', $(this).attr("title"), false, 'div');});
+			
+			
+			$("#openAll").click(function()
+			{	openCollapsableElements($(".collapsable_header"));
+			});
+			$("#closeAll").click(function()
+			{	closeCollapsableElements($(".collapsable_header"));
+			});
+			
+			//$(".open").children(".collapsable_header:nth-child(1)").click();
+			
+			prettyPrint(function()	// prettify all stuffs that has the prettyprint class on it
+			{	// Write special words
+				for(n in parserTerms)
+				{	var realWord = flattenToRealWord(parserTerms, n);	
+					$("."+n).each(function()
+					{	var innerWord = $(this).text();
+						if(innerWord=="")
+						{	innerWord = realWord;
+						}
+						$(this).html("<code class=innerWord>"+innerWord+"</code>");
+					});
+				}
+				var temporaryDebugVariable = true;
+				for(n in wordTerms)
+				{	var realWord = flattenToRealWord(wordTerms, n);	
+					$("."+n).each(function()
+					{	var innerWord = $(this).text();
+						//if(temporaryDebugVariable){temporaryDebugVariable = confirm ("'"+innerWord+"'");}
+						if(innerWord=="")
+						{	innerWord = realWord;
+						}
+						$(this).html("<i>"+innerWord+"</i>");
+					});
+				}
+				for(n in literalWordsA)
+				{	$("."+literalWordsA[n]).each(function()
+					{	$(this).html("<code><b>"+literalWordsA[n]+"</b></code>");
+					});
+				}
+				for(n in literalWordsB)
+				{	var realWord = flattenToRealWord(literalWordsB, n);	
+					$("."+n).each(function()
+					{	$(this).html("<code><b>"+realWord+"</b></code>");
+					});
+				}
+				for(n in attributes)
+				{	$("."+n).each(function()
+					{	$(this).html("<code><b>"+n+"</b></code>");
+						$(this).css(attributes[n]);
+					});
+				}
+				
+				$("#contents .contentsButton[value='"+menuItem+"']").click();	// jump to section again (since things have changed since the last time we jumped)
+				$('.loadingGif').remove(); // done loading
+			});	
+			
+			} catch(e) {
+				try {console.log("Got exception: "+e);}
+				catch(f) {alert(f);};
+			}
+			
+			
+		});
+		
+		if(jQuery.browser.msie == true)
+		{	$(function()
+			{	$("body").wrapInner
+				(	'<div id="IEsucks"></div>'
+				);
+				$("#IEsucks").hide();
+				$("body").prepend
+				(	'<div style="width:800px;margin-left:20px;">'+
+						'<br>'+
+						"This page doesn't support Internet Explorer. If you'd like to see the page anyway, "+'<span class="clickable" onclick="'+"$('#IEsucks').show();"+'">click here</span>. For a better experience, please upgrade your browser:'+
+						'<ul>'+
+							'<li><a href="www.opera.com">www.opera.com</a></li>'+
+							'<li><a href="www.firefox.org">www.firefox.org</a></li>'+
+						'</ul>'+
+					'</div>'
+				);
+			});
+		}
+	</script>
+	
+	<style type="text/css">
+		body
+		{	background-image:url(white%20sidestriped%20bg%20light.gif);
+			margin:auto;
+		}
+		body {
+			max-width:1000px;				
+		}
+		#header {
+			max-width:1000px;				
+		}
+		
+		.loadingGif {
+			position: fixed;
+			top: 0; left: 0;	
+		}
+			.loadingGif img {
+				width: 80px;
+			}
+		
+		body, .noncode
+		{	font-family: helvetica,arial,freesans,clean,sans-serif ;
+			line-height: 1.4;
+			font-size:14px;
+		}
+		
+		h2
+		{	margin:0 0 7px 0;
+		}
+		h5
+		{	margin:5px 0 0 0;
+		}
+		p, div.example
+		{	margin:10px 0;
+		}
+		td
+		{	padding-top:5px;
+		}
+		th
+		{	font-size:12px;
+		}
+		
+		code
+		{	font-size:12px;
+			line-height: 100%;
+		}
+		
+		.innerWord {
+			color:rgb(200,0,0);
+		}
+		.forceComment code, .forceComment {
+			color: grey;
+		}
+		
+		.copiedNote {	
+			color: rgb(100,100,100);
+		}
+		
+		.mainBox, .normalBox, .codeBox, .codeArea, .subBox1, .subBox2 
+		{	border:solid 1px rgb(230,230,230);
+		}
+		.mainBox, .normalBox, .codeBox, .subBox1, .subBox2 
+		{	margin: 10px auto;
+			padding: 3px 10px;
+		}
+		.mainBox, .normalBox, .subBox1, .subBox2 
+		{	background-color:#FFFFFF;
+		}
+		.codeBox, .codeArea
+		{	background-color:#F7F7F7;
+		}
+		
+		.example .collapsable_header {
+			font-size: 11px;
+			color: rgb(150, 80, 80);	
+			font-family: "Comic Sans MS";
+		}
+		
+		.nearTop {
+			vertical-align: top;
+			padding-top: 50px;
+		}
+		
+		.clickable
+		{	cursor:pointer;
+		}
+			.clickable:hover
+			{	text-decoration:underline;
+			}
+		
+		.innerBorder
+		{	border: 1px solid black;
+		}
+		.unbreakable
+		{	white-space: nowrap;
+		}
+		
+		#openAll, #closeAll
+		{	text-decoration: underline;
+			font-style: italic;
+			cursor: pointer;
+		}
+		#openAll:hover, #closeAll:hover
+		{	font-style: normal;
+		}
+		
+		.inlineList li
+		{	display: inline;
+		}
+		
+		#header {
+			position: fixed;
+			background-color: lightgray;	
+			top: 2px;
+			padding: 10px 0;
+			width: 100%;
+		}
+			#contentsContainer {
+				position: relative;	
+			}	
+				#contents {
+					position: absolute;
+					left: 626px;
+					top: -15px;
+					border: 1px solid grey;
+				}
+					#contents li {	
+						cursor: pointer;
+					}
+				
+			#contentsButton {
+				display: inline;
+				font-size: 20px;
+				border: 1px solid gray;	
+				margin-left: 70px;
+				cursor: pointer;
+				padding: 2px 5px;
+				
+			}
+			#contents, #contentsButton {
+				background-color: rgb(240,240,240);					
+			}
+				.rightClickMenu {
+					background-color: white;
+					border: 1px solid gray;
+					cursor: pointer;
+				}
+			
+			#topTitle {
+				font-size: 31px;
+				font-weight: bold;	
+				display: inline;
+				margin-left: 5px;
+			}
+			
+		#top {
+			margin-top: 65px;
+				
+		}
+		
+		.operationsLevel {
+			font-size: 12px;		
+			font-weight: bold;
+			text-align: right;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="header">
+		<div id="topTitle">The Lima Programming Language</div>
+		<div id="contentsButton">Contents</div>
+		<div id="contentsContainer">
+			<ul id="contents" style="display:none;"></ul>
+		</div>
+	</div>
+
+	<div class=loadingGif><img src="loading_transparent_4.gif"></div>
+
+	<div id="top"></div>
+
+	<h2>Under Construction</h2>
+		
+		<span id="openAll">Open All Sections</span>  &nbsp;&nbsp;&nbsp;  <span id="closeAll">Close All Sections</span>
+	
+	<div class="mainBox mainTitle" title="Introduction">
+		
+	</div>
+	
+	
+	<div class="mainBox mainTitle" title="Variables">
+		
+	</div>
+	
+	<div class="mainBox mainTitle" title="Flow Control and Blocks">
+		
+	</div>
+	
+	<div class="mainBox mainTitle" title="Operators">		
+		<div class="subBox1" title="Binary Operators">
+			<table class="definitionTable">
+				
+
+				
+			</table>
+		</div>
+		
+		<div class="subBox1" title="Unary Operators">	
+			
+		</div>
+		
+		<div class="subBox1" title="Unused Operators">
+			
+		</div>
+		
+		<div class="subBox1" title="Order of Operations">
+			<center>(everything is evaluated from left to right except Assignment operators and the ^ operator)</center>
+			<table class="normalTable">
+			
+			</table>
+		</div>
+		
+		<div class="subBox1" title="Destructuring Assignment">
+		
+		</div>
+		
+		<div class="subBox1" title="Operator Overloading">
+			<table class="definitionTable">
+			
+			</table>
+		</div>
+		
+	</div>
+	
+	<div class="mainBox mainTitle" title="Functions and Methods">
+		<p>	Function values have the following methods defined for them:
+			<table class="definitionTable innerBorder">
+				
+				<tr><td>partialInverse</td>
+					<td><p>	Returns the inverse or partial-inverse of the function. 
+							If the function cannot be fully inversed for a given input to the inverse-function, 
+								running the inverse-function will return the partial-inverse of the function for that input.
+							The partial-inverse of a function uses a well-defined, tho arbitrary, method 
+								for choosing one original-input for a given original-output in the case where
+								there is a one-to-many relationship from outputs to inputs.
+						</p>
+						<p>	If the function cannot be fully or partially inversed for a given input, an exception will be thrown.
+						</p>
+					</td>
+				</tr>
+
+			</table> 
+		</p>
+		
+	</div>
+	
+	
+	<div class="mainBox mainTitle" title="Attributes">
+		
+	
+		<table class="definitionTable">
+		
+			
+		</table>
+		<p> <p>
+	</div>
+	
+	<div class="mainBox mainTitle" title="Predefined Variables">
+		<div class="subBox1" title="Predefined Types">
+			
+			<table class="definitionTable">
+				
+				<tr><td><span class=complex></span></td>	
+					<td>A complex number.
+						<h5>Methods:</h5>
+						<table class="definitionTable innerBorder">
+							<tr><td><span class=dotOperator></span></td>	
+								<td><span class=pseudoMember></span> that returns a complex number type containing two fra-typed members (<span class=complex_re></span> and <span class=complex_im></span>) of the type given after the dot.
+								</td>
+							</tr>
+						</table> 
+					</td>
+				</tr>
+				<tr><td><span class=win></span></td>	
+					<td>The type for a window. Used to access window functions.
+					</td>
+				</tr>
+				<tr><td><span class=tree></span></td>	
+					<td>An acyclic graph. Inherits from graph, but ensures that the data structure remains free of cycles and ensures that each node (other than the head) has one parent and one parent only. 
+						It has a member called root that points to the root/head of the tree.
+					</td>
+				</tr>
+				<tr><td><span class=graph></span></td>	
+					<td><p>	A data structure that can be used to represent complex relationships between data. 
+							Nodes must have a value or type associated with them. It has the following members:
+							<ul><li>class node - an internal class type that stores a list of child vectors (directed away from it), 
+										a list of parent vectors (directed toward it), and a value member variable. 
+									Members:
+									<ul><li>p - the list of references to parent vectors</li>
+										<li>c - the list of references to child vectors</li>
+										<li>val - the value</li>
+									</ul>
+									note: in the case of an undirected graph (or a graph where all connections are two way), p and c will be the same list.
+								</li>
+								<li>vector - an internal class type that stores a reference and a value. 
+									It represents a directed link between two nodes and has a value that can be used to represent the cost of the link, or any number of other things (since the value can be of any type, including class types). 
+									Note that the vector pointing from a parent to a child will be referenced from both nodes (the list of child vectors in the parent, and the list of parent vectors in the child) and both reference the same object. 
+									Members:
+									<ul><li>r - the reference</li>
+										<li>val - the value associated with the vector</li>
+									</ul>
+								</li>
+								<li>point - add one way connection between nodes (implicitly adds nodes). Returns a reference to the parent node.</li>
+								<li>connect - add directionless/two-way connection between nodes (implicitly adds nodes). 
+									Also is used to add a single node to an empty graph. Returns the first node in the parameter list.
+								</li>
+								<li>has - check if a node exists.</li>
+								<li>[[ ]] operator - find/search-for a node. 
+									This can be used to search for a node that has certain parents, certain children, or a certain value. 
+									Returns a reference that may be nil.
+								</li>
+								<li>& operator - conjunction of graphs based on matching values of nodes.	</li>
+								<li>$ operator - union (disjunction) of graphs</li>
+								<li>!$ operator - exclusive disjunction of graphs.</li>
+								<li>!& operator - material non-implication of graphs. Removes nodes from a graph. </li>
+								<li>a way to union/conjunction/etc two graphs more general comparisons of values.</li>
+								<li>wcComponents - method that returns a set containing all weakly connected components that make up the graph.</li>
+								<li>scComponents - method that returns a set containing all strongly connected components that make up the graph. 
+									(Note, this function is the same as wcComponents for undirected graphs (or grahs where all connections are two way).
+								</li>
+							</ul>
+					</td>
+				</tr>
+			</table>
+			
+			<div class=subBox2 title="Predefined Parameterized Types">
+				
+				<table class="definitionTable">
+					
+					<tr><td><span class=word>tuple</span></td>	
+						<td><table class="methodDefinitionTable2 innerBorder">
+								<tr><td>type  type  ...</td>
+									<td>A tuple type. 
+										These types can be used to return multiple values from a function or to write complex statements in a more simple way. 
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+				</table>
+			</div>
+			
+			<div class=subBox2 title="Predefined Type Factories">
+				
+				<table class="definitionTable">
+					
+				</table>
+			</div>		
+		</div>
+		
+		<div class=subBox1 title="Predefined Objects">
+			<table class="definitionTable">
+			 
+				<tr><td>screens</td>
+					<td><p>	A list of visual output devices (monitors).
+							Each element in the list has the following members:
+							
+							<table class="definitionTable innerBorder">
+								<tr><td>shape</td>		
+									<td>A shape object containing the (usually rectangular) shape of the monitor.
+										The shape's coordinates will be relative to the top left corner of the viewing area.
+										The units of the shape are in meters.
+									</td>
+								</tr>
+								<tr><td>resolution</td>		
+									<td>A shape object containing the resolution of the screen (its shape in units of pixels.
+										The shape's coordinates will be relative to the top left corner of the viewing area.
+									</td>
+								</tr>
+								<tr><td>resolutions</td>		
+									<td>A list of supported resolutions.
+									</td>
+								</tr>
+								<tr><td>brightness</td>		
+									<td>The screen's brightness.
+									</td>
+								</tr>
+								<tr><td>colors</td>		
+									<td>The number of colors the monitor can display.
+									</td>
+								</tr>
+							</table>
+						</p>
+					</td>
+				</tr>
+				
+				
+				<tr><td>win</td>
+					<td><p>	Object for creating windows.
+						</p>
+							
+						Has the following method:
+						<table class="methodDefinitionTable innerBorder">
+							<tr><td><span class=bracketOperator></span></td>		
+								<td>shape</td>	
+								<td><p>	Returns a window with the given shape, which should be a 2 dimensional shape.
+										The shape simultaneously describes the size, position, and actual shape of the window.
+										<code>shape</code> is an optional parameter and some default window shape is chosen.
+										If the passed shape isn't supported for whatever reason, 	
+											the attribute <code>warningsHandler</code> is called with an exception object
+											containing a message about what isn't supported and what is supported.
+										If no <code>warningsHandler</code> is set, an exception is thrown.
+									</p>
+								</td>
+							</tr>
+						</table>
+						
+						<p>	The <code>win</code> object returned by the bracket-operator above has the following members:
+							<table class="definitionTable innerBorder">
+								<tr><td>pixels</td>		
+									<td>A matrix of color-objects on the window. 
+										Changing a pixel in this object immediately changes that pixel on the screen.
+									</td>
+								</tr>
+								<tr><td>views</td>		
+									<td>A list of view-objects ready to be drawn on the window.
+										The views are drawn in order, and thus can be used to always draw certain things
+											over others (like a HUD or something like that).
+									</td>
+								</tr>
+								<tr><td>shape</td>		
+									<td>The shape of the window.
+									</td>
+								</tr>
+								<tr><td>active</td>		
+									<td>Returns true if the window is currently active.
+									</td>
+								</tr>
+							</table>
+							
+							<code>win</code> objects have the following method:
+							<table class="methodDefinitionTable innerBorder">
+								<tr><td>draw</td>
+									<td></td>		
+									<td>Draws the view-objects in <code>this.views</code> (changes the pixels matrix).
+										Draws views in the order listed in <code>this.views</code>.
+									</td>
+								</tr>
+							</table>	
+						</p>
+					</td>
+				</tr>				
+				
+				<tr><td>view</td>
+					<td><p>	Object for creating 2d projections of a set of 3d shapes.
+						</p>
+							
+						Has the following method:
+						<table class="methodDefinitionTable innerBorder">
+							<tr><td><span class=bracketOperator></span></td>		
+								<td>overlayShape position direction projectionMatrix drawList</td>	
+								<td><p>	Returns a view over the area of the window indicated by <code>overlayShape</code>.
+										The view's top left corner is at <code>position</code> (which should be a point-shape), 
+											pointing in the direction <code>direction</code> (another point-shape)
+										<code>projectionMatrix</code> is the 4 by 4 square matrix describing the projection transform.
+										<code>objects</code> is a list of 3d objects that will be used as the 3d "world" 
+											to be projected into a 2d image.
+											
+									</p>
+								</td>
+							</tr>
+						</table>
+						
+						<p>	The <code>view</code> object returned by the bracket-operator above has the following members:
+							<table class="definitionTable innerBorder">
+								<tr><td>objects</td>		
+									<td>A list of cshape-objects that can be projected into a 2d image.
+									</td>
+								</tr>
+								<tr><td>texture</td>		
+									<td>Pseudomember that returns a texture object containing the 2d image of the objects.
+									</td>
+								</tr>
+							</table>	
+							
+							<code>view</code> objects have the following method:
+							<table class="methodDefinitionTable innerBorder">
+								<tr><td>pointLine</td>
+									<td>point</td>		
+									<td>Takes in a point on the view and returns a line in the 3d space a view is rendering.
+										This is to do things like find the intersection of a mouse click with 3d objects.
+									</td>
+								</tr>
+							</table>
+						</p>
+					</td>
+				</tr>					
+				
+				<tr><td class=nearTop>color</td>
+					<td><p>	An object for handling colors.
+						</p>
+							
+						Has the following members:
+						<table class="definitionTable innerBorder">
+							<tr><td>rgbWheel</td>	
+								<td><p>	Returns the standard RGB color wheel.
+									</p>
+								</td>
+							</tr>
+							
+							<tr><td>rgb</td>	
+								<td><p>	Same thing as <code>color.cs['rgb']</code>.
+									</p>
+								</td>
+							</tr>
+							<tr><td>cmyk</td>	
+								<td><p>	Same thing as <code>color.cs['cmyk']</code>.
+									</p>
+								</td>
+							</tr>
+							<tr><td>hsl</td>	
+								<td><p>	Same thing as <code>color.cs['hsl']</code>.
+									</p>
+								</td>
+							</tr>
+						</table>
+							
+						Has the following methods:
+						<table class="methodDefinitionTable innerBorder">
+							<tr><td>!</td>		
+								<td></td>	
+								<td>Returns a <code>type</code> that enforces variables to hold color objects.
+								</td>
+							</tr>
+							<tr><td>s</td>		
+								<td>colorSpaceCodename</td>	
+								<td>Returns an object with methods for handling color parts for a particular 
+										<a href="http://en.wikipedia.org/wiki/Color_space">color space</a>.
+								</td>
+							</tr>
+							<tr><td><span class=bracketOperator></span></td>		
+								<td></td>	
+								<td>The same bracket operator <code>color.s['rgb']</code> has.
+								</td>
+							</tr>
+							<tr><td>wheel</td>		
+								<td>colors</td>	
+								<td><p>	Creates a color wheel using the passed list of colors 
+											- a wheel where the colors are evenly spaced out, in order, around a circle.
+									</p>
+								</td>
+							</tr>
+							<tr><td>add</td>		
+								<td>name staticMembers standardObject</td>	
+								<td><p>	Adds a color space named <code>name</code>.
+										<code>staticMembers</code> should be an object containing the members you'll get when you access
+											<code>color.cs[name]</code>.
+										<code>standardObject</code> should be a function that takes a <code>color!</code> object and returns 
+											the object you'll get when you access <code>timeObject.cs[name]</code>.
+									</p>
+								</td>
+							</tr>
+						</table>
+						
+						<h4>Color objects</h4>
+						
+						<p>	A color object represents a single color.
+						</p>
+						
+						<p>	Color objects have the following members:
+							<table class="definitionTable innerBorder">
+								<tr><td>rgb</td>	
+									<td><p>	Same thing as <code>colorObject.cs['rgb']</code>.
+										</p>
+									</td>
+								</tr>
+								<tr><td>cmyk</td>	
+									<td><p>	Same thing as <code>colorObject.cs['cmyk']</code>.
+										</p>
+									</td>
+								</tr>
+								<tr><td>hsl</td>	
+									<td><p>	Same thing as <code>colorObject.cs['hsl']</code>.
+										</p>
+									</td>
+								</tr>
+							</table>	
+						</p>
+						
+						<p>	Color objects have the following methods:
+							<table class="methodDefinitionTable innerBorder">
+								<tr><td>cs</td>	
+									<td>colorSpaceCodename</td>		
+									<td>Returns an object with members for creating modified color objects from teh current one 
+											retlated to the given color-space.
+									</td>
+								</tr>
+								
+								<tr><td>+</td>
+									<td>color</td>	
+									<td>Adds the colors together
+									</td>
+								</tr>
+								<tr><td>-</td>
+									<td>color</td>	
+									<td>Subtracts the colors together
+									</td>
+								</tr>
+								<tr><td>mix</td>
+									<td>weight color</td>	
+									<td>Mixes two colors together with some weight on the passed color.
+										E.g. 50% would basically average the colors, and 5% would barely introduce some of the passed color.
+									</td>
+								</tr>
+								
+								<tr><td>comp</td>	
+									<td>wheel</td>		
+									<td>Returns the color complimentary to the calling color.
+									</td>
+								</tr>
+								<tr><td>triad</td>	
+									<td>wheel angle</td>		
+									<td>Returns a list of the three colors that make up the color triad in a given color wheel for the calling color.
+										The <code>angle</code> will give the shape of the symmetric triangle used to find the triad.
+									</td>
+								</tr>
+								<tr><td>tetrad</td>		
+									<td>wheel</td>	
+									<td>Returns a list of the four colors that make up the color tetrad for the calling color.
+									</td>
+								</tr>
+								<tr><td>analog</td>	
+									<td>wheel distance</td>		
+									<td>Returns an analogous color a certain distance along the color wheel.
+									 	0 to 1 represents all possible distances.
+									</td>
+								</tr>
+							</table>	
+						</p>
+						
+						<h4>Color spaces</h4>
+						
+						<p> A color space is a mathematical describing how to represent colors. 
+							Lima supports arbitrary color spaces and allows seamless use of color spaces while maintaining
+								a single unambiguous color representation.
+								
+							<table class="definitionTable innerBorder">
+								<tr><td class=nearTop>rgb</td>
+									<td> <a href="http://en.wikipedia.org/wiki/Adobe_RGB_color_space">Adobe RGB</a> 
+											is used as the standard RGB color-space.
+										
+										<h4>Methods available to <code>color.cs['rgb']</code></h4>
+										<table class="methodDefinitionTable innerBorder">	
+											<tr><td><span class=bracketOperator></span></td>
+												<td>integerColor</td>		
+												<td>Returns a color made by interpreting the integer as 
+														1 byte of red, 1 byte of green, and 1 byte of blue.
+													The value of a given color is it's byte's value divided by 255.
+												</td>
+											</tr>	
+											<tr><td><span class=bracketOperator></span></td>
+												<td>redPart greenPart bluePart</td>		
+												<td>Returns a color made from the passed color values.
+												</td>
+											</tr>
+										</table>
+										
+										<h4>RGB members of color-objects: <code>colorObject.cs['rgb']</code></h4> 
+										<table class="definitionTable innerBorder">	
+											<tr><td>red</td>		
+												<td>Represents the red portion of the color (a value between 0 and 1) in the RGB color model.
+												</td>
+											</tr>
+											<tr><td>green</td>		
+												<td>Represents the green portion of the color (a value between 0 and 1) in the RGB color model.
+												</td>
+											</tr>
+											<tr><td>blue</td>		
+												<td>Represents the blue portion of the color (a value between 0 and 1) in the RGB color model.
+												</td>
+											</tr>
+										</table>
+										
+										<p class="copiedNote colorObjectParts"> 
+											Note that modifying any of these members modifies the object they came from.
+										</p>
+									</td>
+								</tr>
+								<tr><td class=nearTop>cmyk</td>
+									<td> A CMYK color-space.
+										
+										<h4>Methods available to <code>color.cs['cmyk']</code></h4>
+										<table class="methodDefinitionTable innerBorder">	
+											<tr><td><span class=bracketOperator></span></td>
+												<td>cyanPart magentaPart yellowPart keyPart</td>		
+												<td>Returns a color made from the passed color values.
+												</td>
+											</tr>
+										</table>
+										
+										<h4>RGB members of color-objects: <code>colorObject.cs['cmyk']</code></h4> 
+										<table class="definitionTable innerBorder">	
+											<tr><td>cyan</td>		
+												<td>Represents the cyan of the color (a value between 0 and 1) in the CMYK color model.
+												</td>
+											</tr>
+											<tr><td>magenta</td>		
+												<td>Represents the magenta of the color (a value between 0 and 1) in the CMYK color model.
+												</td>
+											</tr>
+											<tr><td>yellow</td>		
+												<td>Represents the yellow of the color (a value between 0 and 1) in the CMYK color model.
+												</td>
+											</tr>
+											<tr><td>key</td>		
+												<td>Represents the key (blackness) of the color (a value between 0 and 1) in the CMYK color model.
+												</td>
+											</tr>
+										</table>
+										
+										<p class=colorObjectParts></p>
+									</td>
+								</tr>
+								<tr><td class=nearTop>hsl</td>
+									<td> An HSL color-space.
+										
+										<h4>Methods available to <code>color.cs['hsl']</code></h4>
+										<table class="methodDefinitionTable innerBorder">	
+											<tr><td><span class=bracketOperator></span></td>
+												<td>huePart saturationPart lightnessPart</td>		
+												<td>Returns a color made from the passed color values.
+												</td>
+											</tr>
+										</table>
+										
+										<h4>RGB members of color-objects: <code>colorObject.cs['hsl']</code></h4> 
+										<table class="definitionTable innerBorder">	
+											<tr><td>hue</td>		
+												<td>Represents the hue of the color (a value between 0 and 360) in the HSL color model.
+												</td>
+											</tr>
+											<tr><td>sat</td>		
+												<td>Represents the saturation of the color (a value between 0 and 1) in the HSL color model.
+												</td>
+											</tr>
+											<tr><td>light</td>		
+												<td>Represents the lightness of the color (a value between 0 and 1) in the HSL color model.
+												</td>
+											</tr>
+										</table>
+										
+										<p class=colorObjectParts></p>
+									</td>
+								</tr>
+							</table>
+						</p>
+					</td>
+				</tr>		
+				
+				<tr><td>texture</td>
+					<td><p>	Object for representing color patterns like images.
+						</p>
+							
+						Has the following method:
+						<table class="methodDefinitionTable innerBorder">
+							<tr><td><span class=bracketOperator></span></td>		
+								<td>binaryData params</td>	
+								<td><p> Creates a texture from binary data (like a bmp file). 
+										Params describes how blend each pixel, and how to extend the image in places where it doesn't have any more binary data 
+										(ie where it goes off the bit map - clamp,repeat,transparent,etc?)
+									</p>
+								</td>
+							</tr>
+						</table>
+						
+						<p>	The <code>view</code> object returned by the bracket-operator above has the following members:
+							<table class="methodDefinitionTable innerBorder">
+								<tr><td>image</td>		
+									<td>params</td>
+									<td>Params should contain some way to map a texture object to pixels - a discrete matrix of colors
+									</td>
+								</tr>
+							</table>	
+						</p>
+					</td>
+				</tr>		
+				<tr><td>cshape</td>
+					<td><p>	A shape with color.
+							Inherits from <code>shape</code>.
+						</p>
+							
+						Has the following method:
+						<table class="methodDefinitionTable innerBorder">
+							<tr><td><span class=bracketOperator></span></td>		
+								<td>aShape startingPoint texture blendingOptions</td>	
+								<td><p><code>startingPoint</code> is a point on <code>aShape</code> that the texture's
+											zero-point will map to.
+										The rest of the <code>texture</code> will be mapped parallel to the x-axis (along the direction p[1 0 0])
+											and will conform to the shape of <code>aShape</code>.
+										To be able to attain any possible texture mapping onto a shape, 
+											the texture may have to be rotated or
+											the shape may have to be rotated (and then rotated back).
+									</p>
+									<p> What blending options can there be?
+									</p>
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>		
+			
+			
+				<tr><td><span class=hiZ></span></td>	
+					<td>this stands for high impedance. "Driving" a variable to this value means that whatever it is connected to will determine its value. 
+						If nothing is connected to it, or all of its connections are "driving" hiZ, then its value is undefined or "floating". 
+						Used for hardware simulation or synthesis.
+					</td>
+				</tr>
+				
+				<tr><td><span class=sain></span></td>
+					<td>sain FILE, v - a safe form of the input function "cin" in C++. 
+						x is a list of variables to write to (in order), and FILE is where to input from - the default is stdin. 
+						This will read input from input place FILE and place those value sequentially into the variables in the list "v" . 
+						If the variable being input is not a <code>string</code> variable, sain will parse it according to the type. 
+						It ignores characters that don't match the form of the given variable type, then starts inputing when the characters match, then stops inputing when the characters don't match, and goes on to the next variable. 
+						Default input is stdin. "sain" stands for "Safe in".
+					</td>
+				</tr>
+				<tr><td><span class=tfor></span></td>
+					<td>tfor[v] - where v is a list of variables or constants separated only by spaces. 
+						This converts a data list into a text string. Stands for "text format". 
+						Variables in the data string can be given conversion options with a : (e.g. tout['the' x:hex 'dogs were biting' y:b2:p3 'snowcones']).
+					</td>
+				</tr>
+				
+				<tr><td><span class=garbo></span></td>	
+					<td>This reprents memory garbage. It may only be used as an initialization of a variable. 
+						A variable initialized with <span class=garbo></span> will start with the values preexisting in the memory slots those variables reside in. 
+						Basically this allows you to use an unchecked uninitialized variable.
+					</td>
+				</tr>
+			</table>
+		</div>
+		
+		<div class="subBox1" title="Predefined Functions">
+			<table class="methodDefinitionTable">
+				
+				<tr><td><span class=staticSize></span></td>
+					<td></td>
+					<td>the regular sizeof() function in C. Returns the static size in bytes of a variable, array, or type.
+					</td>
+				</tr>
+				<tr><td><span class=dynamicSize></span></td>
+					<td></td>
+					<td>Returns the size in bytes of a variable, array, or type including its static size and 
+							the dynamic size of any memory pointed to by a ref member.
+					</td>
+				</tr>
+				
+				<tr><td>listset</td>
+					<td>int[min max step]</td>
+					<td>Returns a list of all values between and min and max. 
+						The first value in the list is min, the second value is min+step, the third is min+2*step etc. 
+						No value above max is included in the list, although max may be included as the last <span class=element></span> in the list 
+							(if the step lands exactly on max). 
+						This can be used to make custom types with special ranges of values, 
+							for example listset[0 9 1].enum is a the natural number type - values 0 through 9, or listset[0 1 1/00] is the set of all possible values for probability (ie 0 to 100%) 
+							(the 1/00 indicates infinite precision - in other words, an infinitesimal step ).
+					</td>
+				</tr>
+				<tr><td>floatset</td>
+					<td>fracVals expVals base</td>
+					<td>Returns a list of floating point values. 
+						<code>fracVals</code> is the list of possible mantissa values (the value multiplied by the power of the base), 
+							<code>expVals</code> is the list of possible exponents, and
+							<code>base</code> is the base for the exponent.
+						This is loosely based on and is an extension of the ieee single-precision and double-precision floating point standards. 
+						For example, <code>floatset[listset[-2+1/00  2-1/00  1/2^23]  listset[0  2^8-1  1]  2]</code> is the single-precision standard (omitting special values like NaN, infinity, and denormal floating point numbers).
+					</td>
+				</tr>
+				<tr><td>joinDimension</td>
+					<td>n list1 list2</td>
+					<td>If list is a matrix or multidimensional array then joinDimension is a function that joins another multidimensional array at a specific dimension. 
+						<p class=example><code>
+							joinDimension[0 list1 list2] 
+							;;is the same as:
+							list1.cat[list2]
+						
+							joinDimension[1 list1 list2]
+							
+							;; is the same as:
+							
+							;; returns list1 with each <span class=element></span> of list2 appended to the end of each element of list1
+							var  list3=list1
+							df list3 : e n
+							[	e.=cat[list2[n]]	
+							]
+						
+						</code></p>
+						<p class=example> and <code>joinDimension[2 list1 list2]</code> is the same as:
+						<br>
+						<code>
+							;; returns list1 with each 2nd-level <span class=element></span> of list2 appended to the end of each 2nd-level element of list1
+							var  list3=list1
+							df list3 : e n
+							[	df e : e2 n2
+								[   e2.=cat[list2[n n2]]
+								]
+							]
+						</code></p>
+					</td>
+				</tr>
+				<tr><td>cartesian</td>
+					<td>lists..</td>
+					<td>Cartesian product. 
+						This returns the list of all possibilities for combining elements of all the input <code>lists</code> in the order they appear.
+						<p class=example>
+							<code>
+								x = {1 2}
+								y = {3 4}
+								cartesian[x y]
+								;; returns {{1 3}{1 4}{2 3}{2 4}}
+							</code>
+							and
+							<br>
+							<code>
+								x = {1 2}
+								y = {3 4 5}
+								z = {6}
+								cartesian[x y z]
+								;;[ returns:
+								{{1 3 6}
+								 {1 4 6}
+								 {1 5 6}
+								 {2 3 6}
+								 {2 4 6}
+								 {2 5 6}
+								}
+								;;]
+							</code>
+							
+							also the cartesian of a single list just returns that list's elements wrapped in their own object:
+							<code>
+								cartesian[{1 2 3}]
+								;; returns: {{1}{2}{3}}
+	
+							</code>
+						</p>
+						
+						<p>The cartesian product is not commutative.</p>
+						
+						<p>	This function is useful for creating tuples and other arrays.
+							For example, <code>cartesian[int flo]</code> creates a tuple-type, objects of which are lists where the first element is an <code>int</code> and the second is a <code>flo</code>.
+						</p>
+					</td>
+				</tr>
+				<tr><td>recartesian</td>
+					<td>cartesianLists..</td>
+					<td>Combines the <code>cartesianLists</code> into new cartesian lists of combinations.
+						For example, <code>recartesian[cartesian[x y] cartesian[z z2 z3]]</code> is the same as <code>cartesian[x y z z2 z3]</code>.
+						This allows you to easily recombine already-computed cartesian lists with new dimensions.
+						To combine a single list of values into a cartesian list, do something like this: 
+						<code>recartesian[cartesianList cartesian[regularList]]</code>.
+					</td>
+				</tr>
+				<tr><td>chooset</td>
+					<td>n list</td>
+					<td>If <code>n</code> is an integer, returns the number of combinations of <code>list</code> for choosing <code>n</code> (non-replaceable) elements of <code>list</code>.
+						Is the physical manifestation of the <a href="http://en.wikipedia.org/wiki/Binomial_coefficient">Choose Function</a> in that
+							the <i>Choose Function</i> counts the number of elements in the list returned by <code>chooset</code>.
+						If <code>n</code> is a list of integers, returns a concatenation of the <code>chooset</code> for each integer in <code>n</code>.
+						<p class=example><code>
+							;; returns {{1 2}{1 3}{2 3}}
+							chooset[2 {1 2 3}]
+							
+							;; returns {{1}{2}{3}{1 2}{1 3}{2 3}}
+							chooset[{1 2} {1 2 3}]
+						</code></p>
+					</td>
+				</tr>
+				<tr><td>rchooset</td>
+					<td>n list</td>
+					<td>Like <code>chooset</code> but allows elements to repeat.
+						<p class=example><code>
+							;; returns {{1 1}{1 2}{1 3}{2 2}{2 3}{3 3}}
+							rchooset[2 {1 2 3}]
+							
+							;; returns {{1}{2}{3}{1 1}{1 2}{1 3}{2 2}{2 3}{3 3}}
+							rchooset[{1 2} {1 2 3}]
+						</code></p>
+					</td>
+				</tr>
+				<tr><td>comboset</td>
+					<td>places list</td>
+					<td>If <code>places</code> is an integer, returns a list of all the unique ordered combinations of each element of list, for the given number of places. 
+						If <code>places</code> is a list of integers, returns a concatenation of the comboset for each integer in <code>places</code>
+							(a list of all the unique ordered combinations of each element of the list for each value in <code>places</code>).
+						<p class=example><code>
+							;; returns {{1 1}{1 2}{1 3}{2 1}{2 2}{2 3}{3 1}{3 2}{3 3}}
+							comboset[2 {1 2 3}]
+							
+							;; returns {{1 1 1}{1 1 2}{1 2 1}{1 2 2}{2 1 1}{2 1 2}{2 2 1}{2 2 2}}
+							comboset[3 {1 2}]		
+						</code></p> 
+						
+						This can be used to make customized array types - array types that can only be of certain lengths, etc. 
+						<code>comboset[3 L]</code> is the same thing as <code>cartesian[L L L]</code>.
+					</td>
+				</tr>
+				<tr><td>powerset</td>
+					<td>list</td>
+					<td>Returns the powerset of the list.
+						Same as <code>comboset[0..list.len list]</code>
+						<p class=example><code>
+						;; returns {{} {1} {2} {3} {1 2} {1 3} {2 3} {1 2 3}}
+						powerset[{1 2 3}]
+						
+						;; returns {'' 't' 'h' 'e' 'th' 'te' 'he' 'the'}
+						powerset['the']
+						</code></p>
+					</td>
+				</tr>
+				<tr><td>assarray</td>
+					<td>typeTupleList</td>
+					<td>Used for defining the possible values of arrays where certain keys can only take on certain values (defined by each type tuple in typeTupleList).
+					</td>
+				</tr>
+				<tr><td>massarray</td>
+					<td>outType keys</td>
+					<td>Used for defining the possible values of arrays where multi-dimensional associative array, 
+						where outType is the classic "type" of the multi-dimensional array (the innermost type in the system of arrays), 
+						and keys is a list of types where each type in the list is the key-type for a given dimension of the multi-dimensional array.
+					</td>
+				</tr>
+				
+				<tr><td><span class=integrate></span></td>
+					<td></td>
+					<td>
+					</td>
+				</tr>
+				<tr><td><span class=d></span></td>
+					<td></td>
+					<td>derivative
+					</td>
+				</tr>
+				<tr><td><span class=pd></span></td>
+					<td></td>
+					<td>partial derivative
+					</td>
+				</tr>
+				<tr><td><span class=lim></span></td>
+					<td></td>
+					<td>limit
+					</td>
+				</tr>
+				<tr><td><span class=solve></span></td>
+					<td></td>
+					<td>
+					</td>
+				</tr>
+			</table>
+		</div>
+		
+		<div class=subBox1 title="Predefined Custom Functions">
+			<table class="definitionTable">
+				
+				<tr><td><span class=enum></span></td>	
+					<td><p>	Declares the input set of variable names as constants and initializes them with different values in order.
+							The type is determined by the value assigned to the first defined constant. 
+							If no value is assigned, the default type is int, and the default value is 0. 
+						</p>
+						<p>	The difference between the value assigned to the second constant and the first constant determines the amount added to every subsequent constant 
+							(using the + operator: overloaded or not). 
+							If the second constant is not assigned to, the default increment is 1 (if the type being enumerated isn't compatible with adding 1 to it, then the second constant must be assigned to). 
+							Any subsequent constant may be assigned to, and incrementing will continue from that value. If two consecutive constants are assigned to, the increment amount is changed accordingly.
+						</p>
+						<p>	The type of the enumName is the typeset[list] of all the constants enumerated in that type. (for example, a pn enum is: "typeset[{0 1 2 3 4 5}]".
+							<p class=example>
+							<code>enum enumName [a  b=2  c  d  e=55  f  g  h]</code><br>
+							After this a=0, b=2, c=4, d=6, e=55, f=57, g=59, and h=61. enumName's type is typeset[{0 2 4 6 55 57 59 61}].
+							</p>
+						</p>
+					</td>
+				</tr>
+				
+				
+				
+			</table>
+		</div>
+		
+		<div class=subBox1 title="Predefined Attributes">
+			<table class="definitionTable">
+			
+				
+				
+				
+			</table>
+		</div>
+	</div>
+	
+	<div class="mainBox mainTitle" title="Literals">
+		
+		<table class="methodDefinitionTable innerBorder">
+		</table>
+		
+		<h5>Members available to all values (unless overridden):</h5>
+		<table class="definitionTable innerBorder">
+			<tr><td>unReado</td>	
+				<td>This <span class=pseudoMember></span> allows you to use the variable as if it were not <span class=readOnly></span>.
+				</td>
+			</tr>
+			<tr><td>unConst</td>
+				<td>This <span class=pseudoMember></span> allows you to use the variable as if it were not <span class=const></span>. This is like a "const_cast" in c++. 
+				</td>
+			</tr>						
+		</table>
+		
+		<div class="subBox1" title="Numbers">		
+			<table class="definitionTable">
+				
+				<tr><td><span class=integer></span>pi</span></td>
+					<td>Pi to a given number of digits <span class=integer></span>. 
+						For example, <code>50pi</code> is pi to 50 digits.
+						If no integer is given, <code>pi</code> is the closest flo value to pi.
+					</td>
+				</tr>
+				<tr><td><span class=integer></span>e</span></td>
+					<td>Euler's number to a given number of digits <span class=integer></span>.
+						If no integer is given, <code>e</code> is the closest flo value to Euler's number.
+					</td>
+				</tr>
+			</table>
+			
+			<h5>Members available to all numbers:</h5>
+			<table class="definitionTable innerBorder">
+				
+			</table>
+			
+			<h5>Methods available to all numbers:</h5>
+			<table class="definitionTable innerBorder">
+				
+				
+				<tr><td>intBitlist</td>	
+					<td>There are no bitwise operators in standard Lima. 
+						If you need/want to do them for some reason, you need to convert the numbers you want to operate on into bit lists.
+						Bit lists are always in little endian form (index 0 is the least significant byte).
+						<div class=example><code>
+							var bitlist = 234.bitlist
+														
+							bitlist.insert[0 0]		;; bitwise left logical shift
+							bitlist.cut[0]			;; bitwise right logical shift
+						</code></div>
+						
+						<h5>Extra members in a bitlist:</h5>
+						In addition to the regular members and operators in an object, there are a couple additional ones for a bitlist.
+						<table class="definitionTable innerBorder">
+							<tr><td>int</td>	
+								<td>Returns the integer representation of the bitlist
+								</td>
+							</tr>
+							<tr><td>float</td>	
+								<td>Returns the <code>float</code> value represented by this bitlist.
+									Throws an exception if it doesn't represent a <code>float</code> value.
+								</td>
+							</tr>
+							<tr><td>double</td>	
+								<td>Returns the <code>double</code> value represented by this bitlist.
+									Throws an exception if it doesn't represent a <code>double</code> value.
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+				
+				<tr><td>floatBitlist</td>	
+						
+					</td>
+				</tr>
+				<tr><td>doubleBitlist</td>	
+						
+					</td>
+				</tr>
+				
+			</table>
+			
+			<h5>Binary operators defined for numbers:</h5>
+			<table class="definitionTable innerBorder">
+			
+				
+				
+			</table>
+			
+			<h5>Unary operators defined for numbers:</h5>
+			<table class="definitionTable innerBorder">
+			
+			
+				
+			</table>
+		</div>
+		
+		<div class="subBox1" title="Objects">
+			<table class="definitionTable">
+				<tr><td class=nearTop>
+						{	<span class=definitionBlock></span>
+							<span class=more></span>
+						}
+					</td>
+					<td><p>	An object literal. 
+							
+						</p>
+							
+						<h5>Members available by default for any object:</h5>
+						<table class="definitionTable innerBorder">
+							
+						</table>
+						
+						<h5>Special members only available inside object literals:</h5>
+						
+						<table class="definitionTable innerBorder">
+							
+						</table>
+						
+						
+						
+						<h5>Operators defined for objects:</h5>
+						<table class="definitionTable innerBorder">
+										
+							<tr><td><span class="Rvalue">x</span> &&  $$ !$$ <span class="Rvalue">o</span></td>	
+								<td><p>	Key-aware combinators (conjunction, disjunction, and exclusive disjunction).
+										Keys do not preserve.
+										<div class=example><code>
+										var x = {a=1 b=2 c=3 x=99}
+										var y = {a=1 b=2 d=3 x=100}
+										
+										x&y		;; returns {99 100}
+										x&&y 	;; returns {3 99 100}
+										x$y		;; returns {1 2 3}
+										x$$y 	;; returns {1 2}
+										
+										</code></div>
+									</p>
+								</td>
+							</tr>
+							
+						</table>
+												
+						<h5>Methods available by default for any object:</h5>
+						<table class="methodDefinitionTable innerBorder">
+							<tr><td>[? ]</td>
+								<td>memberList</td>	
+								<td><p>	Returns the first non-nil member in <code>memberList</code>
+										<div class=example><code>
+											thresholds[? app defaultApp][? reason defaultReason]    
+											;; same as
+											thresholds[app]?[reason] | thresholds[defaultApp]?[reason] | thresholds[app]?[defaultReason] | thresholds[defaultApp]?[defaultReason]												
+											
+											var x = {a={one=1 two=2}}
+											x[?c b a][?three two one]	;; returns x[a][two] which is 2
+											x[?x y z][?three two one]	;; gives nil pointer exception, because x doesn't have any of the members x, y, or z
+										</code></div>
+									</p>
+								</td>
+							</tr>
+					
+            				<tr><td>cast</td>
+            					<td>object</td>	
+            					<td><p>	Manually promotes an object that implements the calling object's interface to an object that 
+            								exposes interface members directly.
+            							Throws an exception if the object doesn't implement the calling object's interface.
+            					
+            							<div class=example><code>
+            								var i = {int[a]}
+            								var x = {use[i[a:ay]] ay=5}
+            								
+            								wout[x.ay]         ;; prints 5
+            								wout[i.cast[x].a]  ;; prints 5
+            								wout[x.a]          ;; prints nil because x doesn't expose the member a directly
+            							</code></div>
+            						</p>
+            					</td>
+            				</tr>
+						</table>
+						
+						
+						<h5>Custom methods available by default for any object:</h5>
+						<table class="methodDefinitionTable innerBorder">	
+							
+							<tr><td>Group</td>
+								<td>expressions[value key]</td>	
+								<td><p>	This custom method operates on a list. 
+										Returns a list of new objects that are unique by certain expressions, 
+											and all the other members are combined in some way (or are not included).
+									</p>
+									
+									<p>	Values enumerated before the opening bracket (<code>groupExpressions</code>) are the members grouped by.
+										The <code>value</code> is the value given to each grouped item in the resulting list (often would be an object), 
+											and <code>key</code> is the key given to each item.
+										Unless a variable name is preceded by a <code>#</code> (further explained below),
+											variable names before the brackets refer to that member of each object in the list, 
+											and variable names inside the brackets refer to the list of those members from each object in a group.
+										Values given keys (with <code>=</code> or <code>:</code> as if they were in a normal object definition)
+											are grouped by and the 
+										<div class=example><code>
+											{{a=1 b=2} {a=3 b=5} {a=1 b=9}}.group a[b.join[v+v2] a] ;; returns {1:11 3:5}
+											{{a=1 b=2} {a=3 b=5} {a=1 b=9}}.group a[] ;; returns {1 3}
+										</code></div>
+										
+										
+									</p>
+									
+									<p> The syntax before the brackets is similar to defining an object.
+										Keys are denoted before either <code>=</code> or <code>:</code>.
+										However, implicit keys can't be done with this construct.
+										Any unspecified members won't exist in the resulting aggregated objects. 
+										<div class=example>
+											<code>
+												{{a=1 b=2} {a=3 b=5} {a=1 b=9}}.group a=a[] ;; returns {{a=1} {a=3}}
+											</code>
+											<code>
+												{{a=1 b=2 c=5} {a=2 b=3} {a=2 b=4 c=49}}.group a=a [{bsum=b.join[v+v2]}]
+												;; returns {{a=1 bsum=2} {a=2 bsum=7}}
+											</code>
+										</div>
+									</p>
+									<p>	Inside the brackets is an aggregated value are other included memebers that can contain aggregated values.
+										Values must have keys inside the brackets.
+										Variable names refer to a list of the given members from each object in the list unless preceded by a <code>#</code> (further explained below).
+										<div class=example><code>
+											{{a=1 b=2} {a=3 b=5} {a=1 b=9}}.group a=a [[b=b]] ;; returns {{a=1 b={2 9}} {a=3 b={9}} }
+										</code></div>
+									</p>
+									<p>	Multiple members and expressions can also be grouped by. 
+										Altogether new members may also be created.
+										<div class=example>
+											<code>
+												var x = { {a='a' b=4 c='m' d=6} {a='a' b=1 c='o' d=9} {a='x' b=5 c='o' d=3 e=false} }
+												x.group a=a [["b":b.join[v+v2] 'mod3':b%3 cee=c.join[v.cat[v2]] ]]	
+												;; returns { {a='a' b=5 cee='mo'} {a='x' b=5 c='o'} }
+											</code>								
+											
+											Another example,
+											<div><code>
+												x.group ey=a mod5=(b+d)%5 [[]]
+												;; returns { {a='a' mod5=0} {a='x' mod5=3} }
+											</code></div>
+										</div>
+									</p>
+									<p>	<code>@k</code> and <code>@v</code> are used to access the key and value of a given item itself.
+										<code>#</code> is used to access variables from an upper-level statements.
+										Example:
+										
+										<div class=example><code>
+										var x = 4
+										var listA = {1 2 3 4 5 6 7}
+										var groupedList1 = lista.group even=@v%2 [[ number=@v.len ]] 
+										;; grouplist1 now holds {{even=true number=3}{even=false number=4}}
+										var groupedList2 = lista.group @k<5 [[ number=@k.len sumOverX=@v[+]/#x ]] 
+										;; grouplist1 now holds {{number=5 sumOverX=3.75}{number=2 sumOverX=3.25}}
+										
+										var listB = 
+										{	{x=1 b=4 c="hi"} 
+											{x=4 b=7 c="hi"} 
+											{x=1 b=9 c="bye"} 
+										}
+										listB.group x=x [[ b=b.group y=@v%5==#x ['outerX':##x 'listBsX':#x 'keys':@k 'keysOuter':#@k.join[v+v2] ] ]]
+										;;[ returns 
+											{	{	x=1 b = {{y=true outerX=4 listBsX=1 keys={0 1} keysOuter={0 2} }} }
+												{	x=4 b = {{y=false outerX=4 listBsX=4 keys={0} keysOuter={1} }} }
+											}
+										;;]
+										</code></div>
+									</p>
+								</td>
+							</tr>
+							
+								
+						</table>
+						
+						
+						
+						<h5>Special constructs that can be used inside the <span class=definitionBlock></span> of an object:</h5>
+						<table class="definitionTable innerBorder">
+						
+							
+						</table>
+					</td>
+				</tr>
+			</table>
+		</div>
+				
+				
+				
+		<div class="subBox1" title="Strings">
+			Methods available to all strings:
+			<table class="methodDefinitionTable">
+					<tr><td>compile</td>
+						<td>targets string</td>
+						<td>Compiles a string to a given set of targets. 
+							It returns an associative array associating each target with a byte string containing code for the target.
+						</td>
+					</tr>	
+			</table>
+		</div>
+		
+	</div>
+	
+	<div class="mainBox mainTitle" title="Miscelaneous">
+		
+		<table class="definitionTable innerBorder">
+			
+			
+		</table>
+	
+	</div>
+	
+	<div class="mainBox mainTitle" title="Parse Function">
+		<span class=parse></span> is lima's parser function that can be used as a general parser.
+		It can be used like a parser generator, but since it's built into the language it can also be used as a parser combinator. 
+		Parser generators and combinators go far beyond the use of regex matching, and are ideal for parsing anything but trivial input.
+		
+		<table class="definitionTable innerBorder">
+			<tr><td>
+					parse
+					[parameters:
+						statements
+						cull
+						[(wordform):
+							statements
+						 <span class=more>wordform-blocks</span>
+						 else: 
+							statements
+						]
+						
+						<span class=more>statements and cull blocks</span>
+					]
+				</td>	
+				<td><p>	Creates a parser function.
+						It has <code>parameters</code> and executes <code>statements</code> like a normal function.
+						Along with normal Lima <code>statements</code>, a <span class=cullBlock></span> can be used.
+					</p>
+					<p>	A <span class=cullBlock></span> matches the sequence to a wordform.
+						Inside the <span class=cullBlock></span>, the <code>wordform</code> is an option for what a sequence has to initially match against.
+						There can be any number of <code>wordforms</code> (and their corresponding <span class=statements></span>).
+						A wordform consists of one or more <code>values</code>, <code>parse</code> function calls, and <i>variable-building</i>.
+						<i>Variable-building</i> puts elements from the sequence into a variable and 
+							is denoted by putting an <code>@</code> in front of a variable in the <code>wordform</code>.
+						If a <code>parse</code> function is used, a variable can be set to the output of it.
+							
+						The special (and optional) wordform <code>else</code> will match if nothing else does.
+						The statments inside <span class=cullBlock>cull-blocks</span> can also contain <span class=cullBlock>cull-blocks</span>.
+					</p>
+					<p>	The parens around the wordform are optional if there is only one piece to the wordform.
+					</p>
+					<p>	If one of the <code>wordforms</code> match, it executes the <code>statements</code> without any side affects 
+							(all parameters and external variables are treated as pass-by-value parameters).
+						You can throw a <code>parse.mismatch</code> if at any point you decide the wordform should not have matched.
+						Once the original parent <span class=parse></span> call figures out which cull statements matched, it runs the functions with their side affects.
+						This way, only statements in matching wordforms are run.
+					</p>
+					<p>	If more than one wordform matches, the longest wordform is taken.
+						If there are more than one matching wordforms with the same length, the first one is taken (looking from top to bottom).
+						If nothing matches, the function throws a <code>parse.mismatch</code> exception.
+					</p>
+					
+				</td>
+			</tr>
+			<tr><td>parseShort
+				</td>
+				<td>Exactly like a normal <span class=parse></span>, 
+					but looks for the shortest match in each <span class=cullBlock></span> (rather than the longest).
+				</td>
+			</tr>
+			<tr><td>parseEager
+				</td>
+				<td>Exactly like a normal <span class=parse></span>, 
+					but accepts the first match it finds in each <span class=cullBlock></span> (trying each wordform from top to bottom).
+				</td>
+			</tr>
+			<tr><td>parse.mismatch
+				</td>
+				<td>Pseudo member that throws a parser mismatch exception to indicate the cull option didn't match.
+				</td>
+			</tr>
+			<tr><td>parse.if
+				</td>
+				<td>Custom function that acts just like a regular <code>if</code> statement, 
+						but if none of the <code>if</code>'s conditionals match then a mismatch exception is called.
+				</td>
+			</tr>
+			<tr><td>parse.n
+				</td>
+				<td>Convenience function that parses a string repeated a range of a number of times.
+					<div class=example><code>
+						cull
+						[x=parse.n['rr' 0 5]:
+						]
+						;; matches 'rr', 'rrrr', '', but not 'rrr' among other things
+						;; and is the same as
+						cull
+						[@x: parse.if
+							[rchooset[0...5 'rr']:
+							]
+						]
+					</code></div>
+				</td>
+			</tr>
+			
+			
+			<tr><td>every
+				</td>
+				<td>
+				</td>
+			</tr>
+			<tr><td>tween
+				</td>
+				<td>
+				</td>
+			</tr>
+		</table>
+		
+		<p>	Roman numeral example:
+			<div><code>
+				var romanNumeralToInt = parse[
+				    var result=0
+		
+					cull x=parse.n['M' 0 3]: 
+						result += 1000*x.len
+
+					cull:
+					 'CM':		result += 900
+					 'CD':		result += 400
+					 x=parse.n['D' 0 1] y=parse.n['C' 0 3]:	
+						result += 500*x.len + 100*y.len
+
+					cull:
+					 'XC':		result += 90
+					 'XL':		result += 40
+					 x=parse.n['L' 0 1] y=parse.n['X' 0 3]:	
+						result += 50*x.len + 10*y.len
+					
+					cull:
+					 'IX':		result += 9
+					 'IV':		result += 4
+					 x=parse.n['V' 0 1] y=parse.n['I' 0 3]:	
+						result += 5*x.len + y.len
+		
+					ret result
+				]
+		
+				// scratchpad test
+				var romanNumeralToInt = parse[
+					n["M" 0..3] 
+		  			("CM" | "CD" | n["D" 0..1] n["C" 0..3])
+		  			("XC" | "XL" | n["L" 0..1] n["C" 0..3])
+		  			("IX" | "IV" | n["D" 0..1] n["C" 0..3])
+				]
+		
+				romanNumeralToInt['MCXXIV'].result
+
+			</code></div>					
+			
+			<p>In regex using javascript, this would be: 	</p>
+			<div><code>
+				function romanNumeralToInt(romanNumeral) {
+					var match = romanNumeral.match(
+						'^(M?M?M?)'+
+						'((CM)|(CD)|((D?)(C?C?C?)))'+
+						'((XC)|(XL)|((L?)(X?X?X?)))'+
+						'((IX)|(IV)|((V?)(I?I?I?)))$'
+					)
+					
+					var result=1000*match[1].length
+				
+					if(match[3].length != 0) result += 900
+					if(match[4].length != 0) result += 400
+					if(match[5].length != 0) result += 100*match[7].length + 500*match[6].length
+				
+					if(match[9].length != 0)  result += 90
+					if(match[10].length != 0) result += 40
+					if(match[11].length != 0) result += 10*match[13]) + 50*match[12].length
+					
+					if(match[15].length != 0) result += 9
+					if(match[16].length != 0) result += 4
+					if(match[17].length != 0) result += 1*match[19].length + 5*match[18].length;
+					
+					return result
+				}
+				
+				romanNumeralToInt('MCXXIV') // returns 1124
+			</code></div>	
+			
+			<p>In PEG.js, this would be: 	</p>
+			<div><code>
+				romanNumeralToIn = th:thousands h:hundreds t:tens o:ones {
+				  return th + h + t + o
+				}
+				
+				thousands = m:('M' 'M'? 'M'?) {
+                    var ms = m.filter(function(m){return m!==null}).length
+					return 1000*ms
+				}
+				
+				hundreds = 'CM' {return 900}
+					 	 / 'CD' {return 400} 
+					     / d:'D'? c:('C' 'C'? 'C'?) {                 
+                             var cs = c.filter(function(c){return c!==null}).length
+							 return d?500:0 + 100*cs
+					 	 }
+				
+				tens = 'XC' {return 90}
+				     / 'XL' {return 40}
+					 / l:'L'? x:('X' 'X'? 'X'?) {     
+                         var xs = x.filter(function(x){return x!==null}).length
+						 return l?50:0 + 10*xs
+					 }  	
+				
+				ones = 'IX' {return 9} 
+					 / 'IV' {return 4} 
+					 / v:'V'? i:('I' 'I'? 'I'?) {                
+						 var is = i.filter(function(i){return i!==null}).length
+						 return v?5:0 + is.length
+					 }		
+			</code></div>
+			
+			<div>
+				The Lima version is much clearer than the pure javascript version (who can keep track of all those <code>match</code> indexes?) and not much longer.
+				The gotchas and obscurities of regex make it a pain to use and a hazard to maintain, and there's absolutely not nice error messages in that parser without a lot of extra work.
+				By contrast, the PEG parser will give nicer error messages, but has limited means of specifying repeated clauses and no parameterization.
+			</div>
+		</p>
+			
+		<p>	Also, in Lima all this symmetry could be combined into logical parts:
+			<div><code>										
+				var romanNumeralPlaces = { 						
+					1000:{primary='M' fiveTimesPrimary=''  tenTimesPrimary=''}  ;; thousands
+					100: {primary='C' fiveTimesPrimary='D' tenTimesPrimary='M'}	;; hundreds
+					10:  {primary='X' fiveTimesPrimary='L' tenTimesPrimary='C'}	;; tens
+					1:   {primary='I' fiveTimesPrimary='V' tenTimesPrimary='X'}	;; ones
+				}
+										
+				var romanNumeral = parse[
+				 int result:
+					result=0
+					var sum
+					df romanNumeralPlaces place weight:	;; loop through each decimal place
+					 	cull[
+						 romanNumeralPlace[place... sum]:
+							result += weight*sum;
+						]
+				]
+				
+				var romanNumeralPlace = parse[
+				 primary fiveTimesPrimary tenTimesPrimary result:
+					var[lowerChar primaryString]
+					
+					cull[
+					 primary tenTimesPrimary: 	result += 9
+					 primary fiveTimesPrimary: 	result += 4
+					 y=parse.n[fiveTimesPrimary 0 1] x=parse.n[primary 0 1]: 
+						result += x.len + 5*y.len
+					]
+				]
+			</code></div>
+			
+			And its only a few lines longer. With a more complicated parsing requirement, 
+				<code>parse</code> can allow for much shorter (and more readable) code than either regex or even a full-fleged parser generator like YACC/Lex or PEG.
+		</p>
+		
+	</div>
+	
+		
+	<div class="mainBox mainTitle" title="Concepts">
+		<ol>		
+			<li title="Demonstrating the power of lima's list operations vs python itertools">
+				<p>	Tho some of these things would be better to be done in more than one line, 
+						this demonstrates how Lima uses some basic constructs to describle an infinity of possibilities.
+					Going through the equivalents for <a href="http://docs.python.org/2/library/itertools.html">Python's itertools library functions</a>:
+				</p>
+				<div><code>
+					;; product(x, y)
+					;; should be produced with cartesian
+					
+					;; permutations('ABCD', 2) --> AB AC AD BA BC BD CA CB CD DA DB DC
+					
+					;; combinations('ABCD', 2) --> AB AC AD BC BD CD
+					;; this is what i called 'chooseset' 
+					
+					;; combinations_with_replacement('ABC', 2) --> AA AB AC BB BC CC
+					;; this is what i called 'rcomboset'
+								
+				</code></div>
+			</li>
+		</ol>
+
+	</div>
+	
+	<div class="mainBox mainTitle" title="Things to mention somewhere">
+		<code pretty="no">
+				
+				
+				== FEATURE FREEZE (things to think about, but not to implement in the first version) ==
+		
+			
+			
+        * probability and value duality/multiplicity - maybe call it something like unsurity or .. i like multiplicit value		
+		* how do you describe a probability map that doesn't have full information?
+			* Like lets say you know that a value from 0 to 3 is returned 90% of the time, but you're not sure what happens the other 10% of the time
+			* It might have to provide a range of possibilities, especially if you want the probabilities over a range that covers 
+				some knowns and some unknowns, for example (using the same 90% 10% example) if you want to know the probability that you get 
+				a value from 0 to 5, the answer would be between 90% and 100%.
+			* this goes back to an object representing a set of values
+				* numbers could be extended to be sets, and operations like + and * can operate on all the members,
+					while testing operations like < and == can mean "are all the members less than?" or "are all the members equal to?"
+					and you'd have to have separate operations to describe "are some of the members less than" etc.
+			* A scratchpad example of what it might look like for you to "know that a value from 0 to 3 is returned 90% of the time, but you're not sure what happens the other 10% of the time":
+			probability.mass[ 
+			   ret {
+			 	 0 .. 3 : .9 ... 1
+			     else : 0 ... .1
+			   }
+			]
+			or maybe
+			probability.mass[ 
+			   ret {
+			 	 0 .. 3 : .9
+			     else : 0 .1
+			   }
+			]
+			  		
+			
+		* Think about how you would be able to put in dependency constraints into a system, something like private/public kinds of things in classes, but at a higher level. 
+			Like saying that a particular module can access some set of other modules, but not others. Strong coupling is a huge problem in programming			
+
+		                   
+		* Maybe stack traces should shorten paths (eg base everything on the main executable path
+			
+		* think about whether to add a function 'guarantee' (maybe with an easier to type name) that allows you to do things like
+		  put time constraints on a block of code (say, to guarantee that the time between an event happening and outputting of 
+          something takes between x and y milliseconds)
+		
+		* Lima probably needs a way to query the system for available resources (cores, cpu availability, memory availability, power avilability, etc)
+		
+		
+		* look at Closure Protocols and protocol-based inheritance/polymophism
+			* badly written article: http://jeditoolkit.com/2012/03/21/protocol-based-polymorphism.html
+		
+        * consider adding a timeout function:
+          timeout 0.03: ;; 30 milliseconds
+             ;; do something
+           else:
+             ;; timeout handling  		
+                	
+			
+		* Think about what DNS features are available (http://www.xbill.org/dnsjava/dnsjava-current/examples.html)
+			* getting the current computer's ip address and/or name
+			* setting(?) MX records
+			* getting the version of the remote server
+			* zone transfer
+			* DNS dynamic update (?)
+	
+		* Probably add a custom function called override (and overide) that can be used to override members from an inherited
+			object, even without explicitly excluding them when inheriting (the override would be the explicit exclusion)
+			* eg
+				x = { int a=5 }
+				y = { mix[x] override fn! a = fn: ret 10 }
+    
+    
+
+   		* think about using objects' identies as enums and other things that need a unique identifier
+   			* objects' identies as in ??
+   			* That way you can ask if something is actually the specific error you're looking for (for example) instead of just an error that looks the same
+   			* revisit enums (in the concepts section) with this in mind
+
+    
+    	* possibly note that lima does *not* use delegation although it does use prototypical inheritance
+			* Despite many stupid things in ambienttalk, they describe prototypical inheritance well:
+ 			 	AmbientTalk�s object instantiation protocol closely corresponds to class instantiation in class-based languages. 
+				  The major difference lies in the evaluation context of the init method: in a class-based language, 
+				  the constructor is ran in the context of an empty object, freshly allocated from the class blueprint. 
+				  In AmbientTalk, the init method is ran in the context of a shallow copy of an original object. 
+				  Hence, in the init method, fields do not necessarily contain nil values: they have the value of the clonee. 
+				  This can sometimes be useful to express the state of a clone as a delta w.r.t. the state of its clonee.
+
+
+        * lime (lima's package manager) should have the following functionality (commandline or as a module):
+            * check what libraries are out of date (and what the version differences are)
+            * automatically update to the highest version in the same major version number for each module
+                * e.g. if a module has the versions: 1.0.0, 1.0.1, 1.1.0, 2.0.0, 2.0.1, and the current version is 1.0.0, doing this will upgrade to version 1.1.0
+
+        
+        * consider adding a method v and changing keys to be k on lists that would be used like this:
+           x = {1 2 3}
+           x.v[0] == 1 & x[[v==2]][0] == nil & x[[v==2]].v[0] == 2
+           * this would be so that things like filter and find that return keys unmodified can be used more easily 
+           x.v[y] == x[x.k[y]]
+           The alternative is to sort by key: x[[v==2]].sort[k][0] - which isn't sooo bad
+
+        * for the package management system, allow people to sign up to receive updates on modules that *their* modules require - so people can be alerted to update appropriately
+
+
+        * lima - maybe have every try-catch automatically roll back everything that happened inside it if an exception happens
+	       * think about this more
+
+		make a crypto library that doesn't suck for lima:
+		* Look at how its done here: https://github.com/cryptosphere/rbnacl - particularly useful is the "what this does/what it expects from you" parts
+		Should have the basic parts:
+			* SecretKeyCryptor
+			* nonce		
+		Scratchpad:
+			salt - needed for password protection (different value stored with each password hash)
+			nonce - needed for any encryption (there to ensure every message is reasonably unique)
+		
+		* Make sure you give clear options for cipher modes for algorithms that can use multiple cipher modes
+		* look up key derivation techniques and evaluate whether any are standard enough to include in the library.
+		* Also need to pay attention to message padding or key padding.
+		* Having something like the randomizer specified using parameters indicating how random you need/want it to be may not work with encryption. It would only work if all encryption and decryption is done only using the program at hand (which is probably  not a good assumption).
+		* Maybe have something like:
+			crypto.enc[message nonce "m+n"] 
+		where 
+			"m+n" is a pattern indicating where the nonce goes. 
+		This would allow flexibility and preciseness of nonce placement while ensuring there *is* in fact a nonce. 
+		You could always get around this by passing a blank nonce. Not sure how reasonable this is
+		
+		
+		* Make lima's package format available as easy libraries for all popular languages so they will use it too. 
+            Then make a translator into lima for some of them - which means you could load say ruby or c or python source 
+            files and use them in a lima program for free
+		
+		* What texture params are there?
+		* what texture.image params are there?
+		* What cshape blending options are there?
+		* what about alpha channels on colors?
+		
+   		* organize your list of custom functions (and other things) into sections
+   			* or possibly get rid of the custom function section and just have cateogries like you already do for 
+			   		* functins and methods
+			   		* operators
+			   		* etc
+		
+		* probably implement atomic blocks using software transactional memory (as at least one possible piece)
+			* This is where statements are executed optimistically logging all state changes and 
+				consistency is checked at the end (to make sure no other source has Fd with the state during that time)
+				and if something has Fd with it, then everything is rolled back
+				* apparently this requires that all the statements only have revokable actions
+				* but maybe you can make everything revokable by waiting to execute output until the end of the atomic block
+					* while this restricts what can be done in atomic block, maybe it simply doesn't make sense to have
+						temporally sequential activity executed "atomically" 
+						- since its technically not possible to send a request and receive a response at the same time (atomically)
+		
+		* write a conecpt for inaccuracy optimizations
+   		
+		* consider the idea that lima doesn't need any syntactic sugar - in fact syntactic sugar might indicate a problem in a langauge. 
+		   It also creates a problem - redundant ways to define things
+		   * Lima doesn't need syntactic sugar because it has semantic sugar - ie arbitrary custom functions that can be defined by the user
+		
+		* maybe Note that lima's mix and use inclusions and exclusions are a lot like trait imports in AmbientTalk http://soft.vub.ac.be/amop/at/tutorial/modular
+		
+		* Think about ambienttalk's concept of object "tagging" (like empty interfaces in java) - might be a good concept for certain constraints in Lima
+		   * http://soft.vub.ac.be/amop/at/tutorial/modular
+		   * this could be implemented by requiring that an object explicitly inherit from a particular object somehow
+		
+			
+		More precisely define interface typing so that an object that had a function that will take a var matches the interface of A function that takes an int
+			
+   		* Possibly when two operators conflict and can't be proven one way or the other to have the same affect,
+   			Run them both in isolation and if they both produce the same result, do it
+   			If they don't, or if they create messages to outside the system that might change the state of the outside world,
+			   then fail.
+			* robbert suggested giving the programmer some control over whether they want an operator to fail if it can't prove the functions are equal or whether they want to run both functions and ensure that the result is equal (which would be pretty non-performant)
+		
+
+   		* write a copyright license that allows lima to be freely used, but stipulates that 
+			A. I be given credit for the language design
+			B. To be called Lima or anything like Lima, the implementation must match the spec (including giving the correct output for a test program), and
+			C. may not introduce any language extensions to the core language - any construct must be buildable from lima's core constructs
+   		
+   		
+		* Should be able to specify external costs as well as internal costs.
+		   * e.g. if you call a mysql server, depending on the size of hte table it might have a different cost. This cost would be invisible to the system unless you explicitly include it.
+		
+		* maybe functions used to create a probability map need to be integratable too so they can calculate percentile
+			* maybe just throw an exception when something is requested that can't be calculated (like an inverse or an integral)
+		
+		* (Scratch this) Lima should have annotations for where the compiler should focus its time (the bottlenecks) 
+ 		  * Question: is there some way a compiler can *always* identify bottlenecks better than the programmer? 
+		   	Seems like the answer should be yes for the same reason the answer is yes to 
+			"can the compiler always be better at optimizing than the programmer?" 
+			- anything you can do yourself, you can tell your compiler to do. 
+		
+		* Seems like the language needs to have an easier way to override inherited methods
+			For example, this is how you'd have to do it today:
+				object = {
+					fn! method = fn:
+						;; do something	
+				}
+				
+				object2 = {use[object[method:objectMethod]]
+					fn! method = fn:
+						objectMethod[]
+						;; do more stuff
+				}
+				
+			but i really want something like:
+				
+				object2 = {use[object]					
+					override fn! method = fn:
+						thisfn.parent.object[]
+						;; do more stuff
+				}
+			or maybe:
+				
+				object2 = {use[object]					
+					// first two arguments are passed to the overridden function
+					override fn! method = fn thisfn.parent.object[2] c d: 
+						;; do more stuff
+				}
+		
+		* Haskell has three exponentiation operators!  This is because there�s a difference in what the three of them mean in some cases, so you get your choice.
+		
+		* Mention that lima is conducive to Language Oriented Programming as described here: http://www.onboard.jetbrains.com/articles/04/10/lop/6.html
+		
+		* conceptually an object keeps track of the identies of what objects' interfaces it implements
+		
+		* You might be able to statically map javascript exceptions to lima exceptions (ie leveraging the underlying system to generate lima exceptions much faster)
+		  * http://helephant.com/2007/05/12/diy-javascript-stack-trace/ - for browsers that don't do exceptions well
+		  * rhino doesn't support function.callee or function.caller but it should be easy to add in there in generated code (just set those values on the function before you call it, or pass in a variable or something)
+		
+		* Link to this somewhere in your docs as to why dogma is stupid, and so are idioms: http://learncodethehardway.org/blog/AUG_19_2012.html
+		
+		* Should be able to specify output ability as well as input behavior for optimizations
+   			* what does output ability mean?
+
+		Lima oips contest - obfuscated in plain sight. rules: standard indentation and formatting.
+
+		* function inverse (quote from an earlier spec):
+			May optionally take additional parameters which define some or all of the input parameters
+				as they would be after completion of the original function 
+				(this may be neccessary for functions that mutate their inputs).
+		
+		* A meta function (meta[object]) can be used to grab an object's meta data
+			* this meta data can contain the members an object should have and their constraints (among other things)
+			* interfaces would have the meta data for members, but wouldn't neccessarily have the members themselves
+
+		anti aliasing blockyness should probably be described as a number from 0 to 00, where 0 is 100% blocky and 00 is 100% smooth.
+			* a value of 2 indicates that each dimension is split into two parts - meaning that you get 4 subpixels per pixel
+			* a value of 10 would mean you have 100 subpixels
+			* a value of 00 effectively makes it continuous which makes coloring 100% precise
+		
+		Still confused as to how you describe color blending
+			* to be 100% precise, you need to split each pixel into exact proportions and then blend each color with that proportion
+			* you can describe this process to be less precise by only choosing a minumum number of colors to blend, 
+				or maybe choosing a minimum proportion of the pixel that needs to be covered before blending
+				* but this kind of describes a process *across* objects
+				* is there any way to describe this in each object individually?
+					* seems like you'd have to do it on a per-pixel basis - not per object
+					
+   		* For optimization plugins:
+				* have a hook for meta-information gatherers that scan the (Lima) program and can set arbitrary describing attributes on a variable
+				* when an optimizer transforms something using a higher-level construct 
+					(something that isn't in the basic syntax and functionality), have it somehow describe the parts of that 
+					higher-level construct in terms of basic functionality, so that other optimizers can still re-optimize it if 
+					it fits a pattern that can optimize further
+		
+		* consider changing the color objects to use wavelengths or something rather than rgb values
+			* also figure out how you can incorporate different color spaces (similar to incorporating different encodings?)
+		
+		* Window anti aliasing - so from what I can gather, this has to do with how pixles are created from a downsampled image 
+			(e.g. when an image is farther away in a 3d scene) when a single pixel has multiple colors in it. 
+			Open question: is there a standard way to measure the realism? I kinda doubt it. 
+			Since there probably is no way to measure how "real" a rendering should look, we'd have to fall back on simply choosing the algorithm ourselves - ie when we create a view or something.
+			* Ask holmes if there's any way to measure anti-aliasing realism
+				* holmes mentioned looking up error metrics around cublic splines
+			* If not, might just have to specify a specific sampling function
+				* maybe you can describe attributes you want the sampling function to have
+				
+		* inaccuracy optimization where object's positions are rounded to the nearest pixel - or something like that
+			* have boundaries like "shape's position can error at most x" or "shape's rotation can error at most x"
+				* this can potentially depend on the object's distance from view positions
+		
+		* possibly describe an anti-aliasing algorithm with the range 0 to 1 where 0 is fully 'blocky' and 1 is fully 'smooth'
+			* note that blocky has the most contrast and smooth has the least			
+			
+   		* How do you describe that your circle, for example, can be drawn with at most a certain precision
+   			* which would allow it to actually draw the circle using less polygons than would allow your screen to have the maximum precision
+   			* Maybe have a minimum number of polygons you use
+   			* Or maybe maximum difference in volume is a better metric
+   		
+		* Possibly describe optimization ability of certain shapes (allowing the shapes to be modified to be easier to draw) 
+				by indicating reduced monitor resolution - ie allowing the drawing of a particular shape to pretend that 
+				the monitor is at a lower resolution that it really is. 
+			This way it could draw more choppily than it would otherwise. 
+			However, I'm thinking this doesn't seem like it would work to specify the reduction of verticies 
+			(and thus polygons) in a shape necessarily. Maybe there'd be two types of specification - 
+			you could say "for simplifying verticies, pretend monitor is this resolution" and for choppyness 
+			say "for simplifying pixel output, pretend monitor is this resolution" - not sure how encompassing that is
+
+
+		* should be able to specify output ability as well as input behavior for optimizations
+			* e.g. monitor will have resolution beween x and y
+
+		* when describing optimization stuff, you should be able to create arbitrary variables you want to optimize
+			* be able to weight them differently so your compiler can make appropriate trade offs
+			* speed, memory, and power aren't the only things - a user could specify other things like maximum cpu usage (vs program speed),
+			readability of output (if you're compiling into another language), or  cost, "complexity" (defined in some user-specific way), or number of components  (if you're compiling into say a schematic that uses physical components,
+			so you don't have to do as much work to put it together)
+
+		* modular optimization tagless-final DSLs: http://okmij.org/ftp/tagless-final/course/optimizations.html
+			* "Modular, composable, typed optimizations in the tagless-final style"
+		* Potentially useful for modular optimization (behind a pay wall): http://www.tandfonline.com/doi/abs/10.1080/03052158508902511
+			* "THE USE OF MODULAR PROGRAMMING IN OPTIMIZING COMBINED SYSTEMS" by J. N. SIDDALL  & CHEN ZEHONG
+
+		* Examples of optimizations that should be modularized: https://www.youtube.com/watch?v=TH9VCN6UkyQ
+
+
+		Think about how to do something like what CSS does, but in an application programming interface. 
+		This would require having some kind of hooks in objects that change when you change your "style sheet". 
+		Is this even necessary? It sounds useful, for sure.
+		
+		* add to pack:
+			* Some ability to check if there are newer major or minor versions for a library.
+		
+		* Think about having the safe-navigation operator return a nil with an 'app' method, so you can create new lists from nil
+			* e.g. 
+				var x = nil
+				x.app[1 2 3] 	;; x now is {1 2 3}
+
+		* split up sections into Basic Lima and Lima's Standard Library, as well as probably making a separate section for	
+			the "Concepts"
+		
+						
+		* need to come up with equivalents for php functions:
+			* checkdnsrr
+			* dns_get_record
+			* getmxrr (what are the weights? no equivalent with dns_get_record?)
+		* consider a method like map and join that operates on sequences
+			* so you can go through every match of a sequence or something
+			* this would replace the 'replace', 'find', and 'ins' methods
+
+		* Note that if a lima object uses two objects that have the same member, 
+			they must be explicitly disambiguated *even if they are not conflicting types*
+				* the reason for this is related to the reason C# uses "explicit interfaces" 
+					- so that multiple interface members that have the same name but different purposes are brought the the programmer's attention
+			* Wherever there is an operator for merging types, an error should happen 
+				* how would you easily dedupe this
+		
+		* In a function, what variables can you access? 
+			* What if that function's copied somewhere?	
+		
+		* Need some rules for what meta information is inherited when you mix or use an object in a new one	
+		* Need to flesh out what meta information there needs to be for objects
+		
+		* object.reflect 
+			* public fields
+			* public const fields
+			* public read-only fields
+			* private fields
+			* aliasing fields (fields that alias something in a higher scope)
+			* addField
+			* metadata
+			* make sure the reflection stuff provides a way to access the 'this' of a container class from a nested class.
+			* make sure theres a way to query the platform the code is running on
+			* self - the object itself
+			
+		* stack.reflect
+			* levels - a list of the stack levels currently active
+			* current level - the current stack level (also tells you how many levels there are, since you are always in the deepest level)
+			
+		* stack level
+			* name - name of the function 	
+			* file - what file the source was defined in
+			* source - string source of the object (as much as possible)
+			* line - what line of the source file where the object was defined
+			* self - the function itself
+			* getlocals[level] - gets a list of the local variables inside the function at the given 'level' (where level represents a level in the call stack)
+			* getUpvalues - gets a list of values in a higher scope that the function uses (ie closes over - since functions are closures)
+				* theoretically this could even be variables the function doesn't use, but has access to
+
+		* hooks - things triggered on certain events
+			* function call
+			* function return 
+			* exception thrown out of function
+			* statement execution (in lua this is a "line" event, but why pretend code is always in the form of lines?)
+			
+		* reflection should be able to see where methods come from (what objects they were originally from if inherited)
+		    *I'm unsure if htis is actually possible 
+		
+		* organize concepts by type so they're more easily searchable	
+			
+		* have a with statement so you can do stuff like 
+		   * doSomething[x[4].moose.with[ v.a==5 & v.b == 6] ] - so that you don't have to duplicate x[4].moose everywhere 
+		   * Note that this is not really like python's with
+		   * also not really like javascript's with, since that unload the entire namespace of an object into a block, whereas this would just create one variable (v) inside an expression
+		
+		
+		* maybe allow an attribute to change external inputs somehow, instead of creating mock objects, create mock input	
+
+		
+		
+		have a combine method for lists where
+		* list.combine[expression] 
+		is the same as:
+		* list.map[expression.map[v2: {v v2}]].join[{} a.cat[b]
+		eg
+		(1..n).combine[1..(v-1)]
+		  .map[{v.0 v.1 v.0+v.1}]
+		  [prime[v.2]]
+		This has a need for a recombine method that takes a list of lists of values instead of a simple list of values so you can do something like:
+		(1..n).combine[1..(v-1)].recombine[v.1..v.0]
+		Is there a simpler way to do this? 
+		Can we defined combine in such a way that it will work in either case?
+			
+		* Can you describe an API - like a web API, using lima? You'd say stuff like it needs to be an http request that has these possible requests and responses. There should be some way to do it.	
+		
+			
+		* Make it so "custom operator" can define any operators to be custom functions
+			* This would mean that "[" is really the custom operator, and it just happens to be eneded with a close bracket
+
+		* split should be able to split by more arbitrary sequences
+			* probably requires a parser to be passed in to parse delimiters
+		
+		
+		* consider adding value-pattern matching to lima - like this:
+			fn.string[int] sayMe = fn
+			 1: ret "one"
+			 2: ret "two"
+			 3: ret "four"
+			 x: "not between 1 and 3"
+			
+			;; would be otherwise done as	
+			fn.string[int] sayMe = fn x:
+				if x == ?0::
+				 1: ret "one"
+				 2: ret "two"
+				 3: ret "four"
+				 else: "not between 1 and 3"
+		
+		
+		Slow Lima contest - a contest for people to write two Lima programs with exactly the same results/effects but run with very difference performance characteristics. 
+		A requirement here would be that the same input assertions be used in both programs. 
+		This can be done in conjunction with an optimization contest intended to incentivize fixing those performance holes. 
+		The optimization contest would probably be tricker, since to be good optimizations, they should be general, and yet a more specific one would perform better (be faster etc). 
+		Maybe you'd just have to have standard benchmarks it has to test well for. 
+		Or maybe there will be a secret modification to the original 
+			program to make it do something basically the same but have a slightly different output.
+		
+		
+		
+		how do you do self-types in lima? Probably don't need them actually, since values aren't typed, but..
+		public abstract class BaseDate {
+		   <this> withYear(int year);
+		}
+		public final class ZonedDate extends BaseDate {
+		    // withYear removed as now correctly in superclass
+		}
+		public final class LocalDate extends BaseDate {
+		    // withYear removed as now correctly in superclass
+		}
+		Lima:
+		BaseDate = {
+		  fn.[this!] withYear = fn int year:
+		    ...
+		}
+		ZonedDate = { mix[BaseDate] }
+		LocalDate = { mix[BaseDate] }
+		
+		
+		staticSize and dynamicSize should probably be in meta data
+		
+		* look into event syntax in Trellis: http://peak.telecommunity.com/DevCenter/Trellis#toc
+			* Got like halfway through
+			* Got stuck on "Creating Generic Controllers by Sharing Cells" and resseting rules..
+				 * maybe the resetting rules stuff can be done using atomic blocks
+							
+		* For probabilityMap.sum, what about probability densities? Do you need infinitesimals to describe pmap.sum as the 
+			summed slice <code>pmap[[20<v<50]].join[0 v+v2]</code>?
+			* I think you kinda do
+		
+		* implement types with event semantics (e.g. types would put a watch on a variable and "check" that its the right type every time it changes)
+			* possibly have the realCustom function return two things - the lima to run, and the result to put in its place 
+				(so that a type function can operate on a variable while leaving the variables behind for other type functions to operate on)		
+			* might wanna keep things simple here
+			
+		* get rid of the concept of 'raised' exceptions (or whatever you want to call them) that get answered by an "answer" block
+			* instead use the attribute concept to set a method that can be called somewhere within (effectively getting an "answer" that way)
+			* write a concept about this (mentioning that raise-answer was a feature i had originally considered)
+			
+			
+			
+		* maybe for pack, some kind of public key or other identifying information sohuld be saved with the executable so that the 
+			canonical source can be validated (authenticated) when its downloaded by the end user 
+		* how do you determine that for pack, that the package you download is correct 
+			* have a checksum to verify the contents
+			* have some way to validate the check sum (authentication)
+		  * http://guide.macports.org/#development
+		  * does gems do something about this?
+		  	* yes, PKI: http://docs.rubygems.org/read/chapter/21
+		  		* this works using a web-of-trust style public key infrastructure
+		  		* This allows one repository to endorse another
+		  			* why would they do this?
+		  				* maybe this is built in
+		  				* a distribution server could simply accept trust requests
+		  				* that server would check their chain of trust (or a portion of it) to determine
+		  					that the requester's request is valid
+		  					* valid requests might be 
+								* ones that haven't requested too much trust (from to many other distro servers)
+								* ones that haven't revoked their key recently (or something like that)
+								* ones that don't lie about who they've requested trust from (would require them to send a list of who they've requested trust from)
+		  			* how do you revoke endorsement?
+		  				* possibly the endorsement can be revoked either
+		  					* with a properly signed message, or
+		  						* this would be useful if you lost your domain
+		  					* from the expected address with a handshake ensuring a proper send receive path
+		  						* this would be useful if you lost your private key
+
+
+		Hooks for intercepting output and injecting input (from the console, network, OS, etc)
+			* this is so you don't have to do as much mock-object bullshit, you can simply test inputs and outputs
+
+		* For graphics, I like the setup of objects having subobjects, and when you draw one object, it automatically draws all 
+			that object's subobjects.
+			But what do you do in cases like you find in html, where you have some image or something inside a div, 
+				but now want it to be relative to an outter node instead of the node its in.
+			This just needs something thinking of the direct object model and other drawing schemes
+		
+		{} should be an operator you can define/redefined
+			* need a {}= operator to define destructuring assignments
+			* seems like less of a good idea now - I kind of determined that destructuring assignments need to be a language construct
+		
+		slima - simple lima. Modularize lima into two parts, slima and full lima which is defined in terms of slima
+			* Have the symbol be a smashed lima bean
+			* Have a custom function called "makeObject" that simply defines a bunch of operators that define the object
+				* This is the equivalent of the way data can be defined in lisp using closures - closures can do the same work in lima
+				* It's actually even more basic than lisp, since even the syntax for combination can be defined through the language (ie the operators - in lisp there's only one operator: parentheses)
+				* examples:
+					* functions are makeObject with some code-text passed in, and define a bracket operator that runs that code
+					* normal objects are makeObject with some member definitions passed in and defines a dot operator that returns a memeber based on the name passed into it
+					* list objects are makeObject with some elements passed in, and defineds a bracket operator that returns an element based on the index passed in			
+	
+		* Lima should be able to use libraries from theoretically any language - all mixed together. 
+			It would translate those languages into lima, and then use them as normal. 
+			It should theoretically be able to do this even for compiled libraries. 
+			The only problem is features that a library might use that aren't compatible with the system you're in 
+				- but that has a standard way of being dealt with - just thrown an unsupported exception. 
+			There are things, tho, like the dom with javascript stuff, and graphics output stuff on OSs, 
+				that could be translated between eachother with a little work. 
+			Even some things like writing to the windows registry could be translated into writing cookies to a person's browser.
+			
+		* Should the random functionality be able to specify probabalistic behavior between different seeds 
+			(like, a generator might generate random values for any given seed, but it might generate pretty similar sequences between seeds)
+		
+							
+		
+		* Idea: How can you make Lima 100% portable? 
+			* Disallowing the program to know what system its operating on, and disallowing non-portable built-in functionality
+					would make every program portable.
+				* However, this would limit many things
+				* A way to get around this: feature querying
+				* Another way to get around this: have a special control flow operator that only takes in discrete
+					* What was I going for??? I never finished this thought. 
+								
+		* for system calls:
+		  * You should be able to pass in a window object or a window attribute object so you can 
+		  	give the process a window it controls (ie if the parent process stops running, that window will still exist)
+		  		* these cover some of the startupinfo and creationgflags stuff
+		* How do you run a command in a specific shell? Open the shell program itself and pass in the right commands.
+		* python popen replacement (http://docs.python.org/release/2.5.2/lib/module-subprocess.html)
+			* pid - need some way to get that
+		
+		
+		* do echoless input via input events (with an object like you'd use to check the state of the mouse or keyboard) 
+			instead of through the console		
+				
+		
+		* python split path and splitext are just helper functions, idk why i told myself to look at them. 
+			* Yes they're useful, but so what? maybe just add these convenient functions to lima's path stuff		
+		* os.stat - http://docs.python.org/library/os.html
+			Just gets some file attributes (more stuff to add to the lima path interface)
+		* http://ofps.oreilly.com/titles/9780596155957/DomainSpecificLanguages.html
+		
+		* idea hidden parameter (a parameter that must be named or defaults). Why? If you want varargs and optional parameters
+			* note the impossibility of using varargs with optional parameters in normal cases	
+
+
+		* think about adding in concepts of non-standard calculus and hyperreal fields into lima
+			* These are different values of 0 (infintesimals) and inifinity
+			* Not entirely sure about this, but it seems like 00 would be defined as 1/0 and 0 would be 1/00 - zero and 00 being treated as positive values
+			* to express this, the solution to x*0 = 5 would be 5/0 or 5*00
+
+		* look into documentation generation and how to facilitate this in lima. for example:
+				* http://sphinx.pocoo.org/tutorial.html
+		* look at google's Noop language to get some ideas about documentation (and potentially other things):
+				* http://code.google.com/p/noop/wiki/ProposalForDocumentation
+				* Output-agnostic: no HTML markup in the documentation! 
+				* Support for example code blocks 
+					* Support for having example code verified
+				* Would be nice if such a system could be integrated with version control so it could know who modified the source of a function / object when 
+					(without storing all that info in source itself)
+				* Usual wiki rules apply, including auto-linking CamelWords 
+				* Perhaps other wiki syntax like ==headers== and [[links]]
+				* Function output specifications that can propogate up functions 
+					(so that you don't have to document things by hand that the compiler can generate)
+				* Think about have a 'meta' attribute that describes members as metadata 
+					- then you'd be able to add metadata to objects exactly like you add normal members
+					* One use i can think for this is that meta data wouldn't appear in IterLists (and thus wouldn't appear in toString methods)
+						* they'd only be accessible directly (or via reflection) (just like you could do with @Retention(RUNTIME) in java)
+				
+		* Have three ways to add documentation on a function:
+			* comments after the parameters
+			* a custom function that provides a way to add lots of meta data without using quotes and such
+			* add info directly onto the object with the attribute 'meta'
+				
+		* how to extend an object with read-only members after its been created
+			* probably need two methods: one that adds a method only on that object, 
+				and one that retroactively adds it to all objects that inherited from that object as well
+			* Revisiting this, why would someone want to do this? Why not extend the object via inhertiance as normal?
+				* the problem with doing this is its hard to maintain the namespace 
+					- what if a modules tries to add a read-only member of the same name as another module. 
+					I can't see a way of disambiguating that.
+				* The way to disambiguate it would be the same way that use and herit use to disambiguate
+					* So this would have to be built into the way that use and herit work, 
+						where if theres a conflict, the member is renamed
+							* obviously, just like in regular inheritance member renaming, the original module
+								still uses the same name for that member 
+							* I was thinking this couldn't be a dynamic feature, because it would mean 
+								if you extended an object midway through a program, some objects that should be the same type, 
+								wouldn't have the extended members. But if theres a way to retroactively adding the extention to all object 
+								that inherited (directly or indirectly) from the extended object, then it would work.								
+		
+				
+		* There should be some way in lima to specify that some data fudging is ok (particularly in the case of threading). 
+			For example, if you have a shared variable that is being incremented or something by multiple threads potentially, 
+			then you should have the option to not synchronize that variable and allow some inaccuracy in the amount that variable is actually being counted. 
+			Maybe this can be a 'volatile' attribute.
+			
+		* reversing functions should be able to treat upvalues the same as mutatable inputs 
+				(you should be able to specify them)
+			* you should also be able to specify that upvalues should be used *as they are*
+				 - which could make for interesting possibilites		
+				 
+		* Should be able to grab the output-set from a function and use it as an enum
+						
+		* Read this: http://www.codecommit.com/blog/scala/the-magic-behind-parser-combinators
+			and this: https://github.com/fab13n/parsec-coffee-script/blob/master/doc/parsec.txt		
+			got it from here (for reference): https://github.com/jashkenas/coffee-script/wiki/List-of-languages-that-compile-to-JS
+		
+		* for the parse function, allow writing arbitrary code, but spoof all external variables 
+			(variables not declared inside the parse function) until the whole 
+			parse function is determined. Then go through the cull "winners" and manifest the changes to those outside variables. 
+			This way you can write arbitrary code inside the parse function, but make sure that only the cull winners' code 
+				affects the outside program.
+			
+		
+	
+		* date parsing stuff should be full fledged parser combinators
+			* parsers should be able to be combined
+			* you should be able to partially parse a string (so that you can have junk on the end that remains unparsed)
+			* how do you make reversible parsers
+				* maybe this can be extended to reversible functions overall
+					* a function is always reversible if it only uses reversible operations
+					* a function may be reversible even if it uses non-reversible operations
+		
+		* idea: for some functions that can return multiple results (especially mathematical results), 
+					return a set object that interacts identically as the values it holds, but can collapse to one primary value when neccessary
+				* Example: square root
+				* x/0 is not undefined (see the idea about hyperreal fields and infintesimals below)
+		* 	
+			<tr><td>set</td>
+				<td>The (infinite) list of numbers definable in a int, from smallest to greatest.
+					Note that because of the order, the index of the value 0 is at 00 (infinity), 
+						the index of the value 1 is at 00+1, etc.
+				</td>
+			</tr>
+			<tr><td>set</td>
+				<td>The (infinite) list of numbers definable in a fra, from smallest to greatest.
+					In other words, all the real numbers.
+					Note that because of the nature of the set, the index of the value 0 is at 00 (infinity), 
+						the index of the value 1 is at 00+1, etc.
+				</td>
+			</tr>
+
+		
+		* consider allowing shadowed variable names in functions separated by an object nesting (e.g. if a function contains an object which has a method that aliases a variable, it should be ok). This would mean that any function could shadow any standard name (like 'if' or 'time')
+
+		* consider having a separate module or object for everything related to a specific language	
+			* number to word translation (to and from)
+			* date translation (months, days of the week)
+		
+
+		* For custom function calls, have a way to specify the length of the body of the call, 
+			so the compiler can tell if you have a syntax error in your custom functin (if it runs over or under)
+
+		* maybe i wrote this before but have a match method that uses simple regex that returns whether or not a string matches
+			* var line = stdin.cut[v.match['.*/n']]
+			* looks like you need to add a function for splitting a string - tho maybe the parser function covers it (but does it cover it easily enough?). 
+			* Similarly for some way of dicing up an array into parts (ie putting every 50 items into a new array).
+			* maybe have a regex split method that takes regex and returns a list
+			* probably a regex match method too  (possibly nix the regex split method, and just have a method that splits on an expression, 
+				where you can use the regex match method)
+			* Also a find method that returns all the matches (?) n a string / list
+		    	* var words = line.find['%w+'] ;; returns a list of words
+		 
+		    	
+		* Think about dart generics and how Lima generics can mesh with it		
+		* Consider an exception coelescense operator (like the nil coelescense operator) 
+			which would discard exceptions from the left operand and use the right operand.
+		
+		    
+		* Think about Lua's rejection of regex: http://www.lua.org/pil/20.1.html
+   			* Full regex is apparently gigantic	
+					
+		* Think about delgation in the prototype-based way, where an object can have a number 
+			of delegate objects that dynamically define inheritance
+					* eg: 
+						a = {
+							x = 5
+							y = 5
+						}
+						
+						Add = {
+							do = fn:
+								ret thiself.x + thiself.y
+						}
+						
+						Multiply = {
+							do = fn:
+								ret thiself.x * thiself.y	
+						}
+						
+						
+						a.delegates.app[Add]
+						
+						wout[a.do] ;; prints 10
+						
+						a.delegates.cut[[v == Add]]
+						a.delegates.app[Multiply]
+						
+						wout[a.do] ;; prints 25
+						
+			* I think this could be accomplished through the use of the reflection system (if thats designed properly)
+				* It could also be pretty easily done on a per method basis 
+					(but it would be more cumbersome if it needed to be done a lot)
+		
+		* maybe allow extending the general object by treating {} like a variable - ie you can set new values on it:
+		   {}.s = 5
+		   x = {}
+		   wout[x.s] ;; outputs 5
+		   ;; not sure if this is at all desirable, but it seems to make sense with the semantics of the language
+				
+		*  need some way of ensuring the garbage collector doesn't fk things up. 
+			* So lima needs some way of saying "this block shouldn't have the GC run" or (hopefully) a more general solution for 
+				describing runtime requirements
+		
+		* The always function can take in a function-value and executes it surpressing side-affects. 
+			* if you're going to allow this, there should be a more general way to surpress side-affects (probably an attribute)
+		
+				
+		* Have some way to write optimizations as a matching statement (so you can say, for example, if it matches this pattern, then transform it into something else)
+	
+			
+		* for asfn and asobj, - thats still a danger if the user uses reflection - there should be some permissions around this)		
+			* This might not be super neccessary in some situations tho, since copies of objects are usually sent
+			* Maybe only allow reflection for things in the same module (and asfn and asobj are considered outside the module)
+		
+		    
+		* think about other "composition operations" you can do with objects other than simple "everything".
+		   * you already have explicit stating of members to include, explicit alisasing, and grabbing all but certain members
+		   * also suggeted is the ability to grab all members except the ones with conflicting names
+		   
+		* Prolima - name for prolog lima custom function
+		
+		* think about returning by reference
+		   * with return by value it is as easy as saying ret x~ to return by reference... so maybe its no big deal?
+		
+		* consider an accessor 'acc' extention to the object's access definition (so that you can define setting and getting at the same time)
+			* it would return a reference to something
+		* consider allowing the access definition thing to override the brakcet operator too
+			* I dunno if this is really neccessary
+		
+		* https://github.com/tolmasky/language   
+		
+		* Think about serialization issues
+		   * maybe have an attribute you put on members to mark them as transient (like in hibernate) 
+		   * You still have to have designated functions that serialize and espeically unserialize (an object can serialize itself, but 
+		       a *different* object must unserialize it - usually this is its prototype/parent)
+		   * auto serialization/unserialization methods would be ideal (and i think very doable with a transient attribute - overridable of course)
+		   * note that this doesn't work for objects with nested pointers to other objects
+		      * For those you need a way to keep track of cycles, which is easy enough for one save, but tricky for multiple saves
+		      * Perhaps allow objects to have an id field much like a database would (or a unique field - but then you need to define over what that field is unique) 
+		      * overview of this in the context of lua http://www.lua.org/pil/12.1.2.html
+		   
+		* Make a note in the concepts section about putting lima code into config files like in lua: http://www.lua.org/pil/12.html
+			Entry[ a b c d]
+			Entry[ a b d c]
+			
+			local count = 0
+			function Entry (b) count = count + 1 end
+			dofile("data")
+			print("number of entries: " .. count)
+			
+			int count=0
+			Entry = fn: count++ 
+			parseMethod[file['data'] Entry][]
+			wout['number of entries: 'count]
+		
+		* Sain should check the type of the variable being passed in, to figure out how to parse the input
+			* Add whatever constructs are neccessary to do this into the reflection system
+			
+		 		
+		* Maybe have an operator (or function) for a sub-set like comparison that checks to make sure the 
+			subset-object has as many or fewer of every object than the superset-object has
+			* e.g. {1 2 3 3} would be a regular subset of {1 2 3}, but would not be this special-subset. 
+			* another e.g. for {1 1 2 2 3}, {1 2 3} is a special-subset, {1 1 2 3} is too, but {1 1 1 2 3} is not. 
+			* This is applicable to the chooseset function  
+				
+	
+		* In the documentatin about operator overlaoding it says 
+			"Just like for methods, when an operator is redefined on an object, only that definition is used - 
+				it doesn't retain inherited operator definitions, even if those definitions could handle arguments that the new definition can't handle."
+			* How can you easily extend a multimethod with another set of valid parameters without rewriting all of the parameters? There should be a way
+		
+
+			
+		* 	;; right now we have simple group:
+			object.group[v.productId].map[{ v[0].productId  v.join[v.price+v2.price] }]
+						
+			;; change to more complex but still relatively simple:
+			object.group v.productId[price.join[v+v2]]
+			
+			;; simple:
+			var x = {{a=1 b=2} {a=3 b=5} {a=1 b=9}}
+			x.group[v.a].map[ v.join[v.b+v2.b] v[0].a]	;; returns {1:11 3:5}
+			
+			;; new:
+			x.group a[b.join[v+v2] a]	;; bracket part is kinda like map
+			
+			;; simple:
+			var x2 = { 1 2 3 4 5 4 3 2 }
+			x2.group[v]	;; returns { {1} {2 2} {3 3} {4 4} {5 5} }
+			
+			;; new:
+			x2.group v: v[v]	;; returns { {1} {2 2} {3 3} {4 4} {5 5} }
+			;; or
+			x2.group v[v]
+		
+		* Specifying runtime behavior contracts
+			*during 
+				* over the whole program
+				* over a program block
+				* conditionally (if certain inputs are certain values, etc)
+			* constraints
+				* max memory usage
+					* absolute (bytes)
+					* percentage (of system)
+				* max cpu usage (percentage)
+				* max execution time
+				
+		* maybe allow syntax for typing arbitrary keys like this:
+			object = {
+			  int[0:4 'hi':45]
+			  string[1:'one' 2:'two']
+			}	
+		
+		* For event semantics, you should have separate events for "clicked within boundaries" and "clicked the object itself" 
+			- the second is basically what you have as onclick in javascript - it should be able to propogate the event if it wants to.
+		
+		
+		* consider removing the ability to specify the return type of a function in a function-type
+			* its kind of awkward because dynamic inputs could make it difficult to determine whether or not the function could violate its return value constraint
+				* it could error if it ever returns something that violates the constraint,
+					* but what if the function is set, and then passed to a less constraining variable - its just super awkward
+				* possibly make it so the input needs to be properly constrained so that the return value can be constrained
+					* ie if you can have any input, you can have any return value
+				* Another possibility is that you can function values that themselves contain the constraints to error if an invalid value is returned
+					* it could be specified like fn.int[ ;;[ statements ;;] ] - which would mean that the type form for this would have to be fn.int![...]
+			* what i'm thinking here is that it shouldn't really matter, the compiler should be able to tell if it can violate its contract
+
+			
+		* probably need a method to get collation from the locale		
+		
+		* Maybe compiler.line and compiler.char should be replaced with some more generalized stack refelction construct,
+			which would be able to know not only the currenctly running line, but the line/character numbers of calling 
+			statements higher in the stack.
+			
+		* [X+Y+Z || X <- [1,2], Y <- [3,4], Z <- [5,6]] 
+		 vs
+		 {1 2}.map[{3 4}.map[v2: {5 6}.map[v3:v+v2+v3]].join[a.cat[b]]].join[a.cat[b]]
+		 Look at your comboset function
+		 this might be done like this: comboset[{1 2} {3 4} {5 6}].map[v[0]+v[1]+v[2]]
+		
+		
+		* I think I've stumbled upon this concept before, but shared libraries should *not* be 
+			different from static libraries and executables - they really contain the same information. 
+		  They're all binaries. The difference is in how you use them. 
+		  The compiler should figure out which way is best to use them, tho. So you really need only 
+		  one function:  lib[whatever] - uses either a static library or shared library
+		   - whichever it deems best (probably usually the dll)
+		   
+		   
+		* Investigate the lithe programming language - which I was never able to find any real information on: http://en.wikipedia.org/wiki/Lithe_(programming_language)
+			* There is a paper you have to *pay* for which seems to be the only source of information for this language
+			* there may be a similarity between lima's custom functions and the syntax-directed translation concept in lithe
+		</code>
+	</div>
+	
+	
+	
+</body>
+</html>
