@@ -386,7 +386,7 @@
 		
 		<p>	Lima is also designed so that every construct in the language can be described by the programmer. 
 			Not only are functions first-class, but so are flow-control constructs like <code>if</code> and <code>while</code>,
-				and attribute constructs like <code>static</code>, <code>private</code>, and <code>const</code>,
+				and attribute constructs like <code>private</code> and <code>const</code>,
 				and modules themselves (since modules represent objects).
 			This give the programmer incredible power to build constructs that blend seamlessly with the core language, 
 				but it also forces the language to be self-consistent - the syntax of Lima's language features aren't special cases.
@@ -492,7 +492,7 @@
 		
 			<p>	Most of the time, the <a href="http://en.wikipedia.org/wiki/Entry_point">entry point</a> to the program will be a function called 'main' 
 					(following the convention of C for operating systems that use a single entry-point).
-				However, the entry-point is not neccessarily 'main' and some operating systems (like Android) even have multiple program entry points.
+				However, the entry-point is not necessarily 'main' and some operating systems (like Android) even have multiple program entry points.
 			</p>
 			<p>	The entrypoint has the following parameters: 
 				<ol><li>A list of command-line arguments.</li>
@@ -1503,13 +1503,13 @@
 									This means that you can copy an object's method to somewhere else, 
 										and when you run the function, it may mutate the object you copied it from.
 									To transfer the object referenced by <span class=self></span> and <span class=this></span>,
-										an object must inherit the function using the <span class=use></span> or <span class=mix></span>.
+										an object must inherit the function using <span class=mix></span>.
 								</p>
 								
 								<p> Inside a function definition, <span class=const></span> variables are accessible anywhere inside the function,
 										even to lines that come before it (as long as its value is resolvable at that point 
 										- see the definition of <span class=const></span> for details). 
-									This is useful for giving more flexbility to the placement of nested functions and is
+									This is useful for giving more flexibility to the placement of nested functions and is
 										necessary for allowing forward-jumps to continuations defined later in the program.
 								</p>
 								
@@ -1918,8 +1918,8 @@
 					in that, since normal objects can be used as interfaces, the interfaces can define 
 					implementations of the members and methods it requires and are fully composable, allowing
 					symmetric sum (via <code>mix</code>ing in multiple objects), 
-					aliasing (via normal <code>use</code> and <code>mix</code> aliasing),
-					and exclusion (also via exclusion allowed with the normal <code>use</code> and <code>mix</code> constructs).
+					aliasing (via <code>mix</code> aliasing),
+					and exclusion (also via exclusion allowed with the normal <code>mix</code> construct).
 			</p>
 			<p>	A type may define an explicit interface - members and methods that a value must have to match a given type.
 				Usually this is done using the <code>!</code> operator for objects - which returns a <code>type</code> object that 
@@ -1942,7 +1942,7 @@
 					but can simply have the same <i>structure</i> the interface requires.
 				This is similar to whats refered to as duck typing and more similar to 
 					<a href="http://www.dartlang.org/articles/m1-language-changes/#no-explicit-interfaces">what Dart calls implicit interfaces</a>.
-				When an object inherits (<code>mix</code>es in or <code>use</code>s) an object, 
+				When an object inherits an object (via <code>mix</code>),
 					it automatically implements that object's interface and any interface that object implements
 					(unless any members are excluded from the inheritance - explained more below).
 				
@@ -1988,10 +1988,10 @@
                     var i2 = {var v}
                     
                     
-                    var w = {use[i1] v=1}   // implements i1's identity
-                    var x = {use[i2] v=2}   // implements i2's identity
+                    var w = {mix[i1] v=1}   // implements i1's identity
+                    var x = {mix[i2] v=2}   // implements i2's identity
                     var y = {v=3}           // implements neither's identity, but still matches both their interfaces
-                    var z = {use[i1 i2:[v:v2]] v=4 v2=5} // implements both
+                    var z = {mix[i1 i2:[v:v2]] v=4 v2=5} // implements both
                     
                     var f = fn
                      i1! a: wout[a.v]
@@ -2014,8 +2014,8 @@
 					 i! v: wout[v.a]
 					 v: wout[0]
 					
-					var x = {use[i] a=1337}
-					var y = {use[i:[!a]] a=900}
+					var x = {mix[i] a=1337}
+					var y = {mix[i:[!a]] a=900}
 					
 					print[x] ;; prints 1337 because x implements i
 					print[y] ;; prints 0 because y doesn't implement i
@@ -2035,7 +2035,7 @@
 						var memberSum = fn iGenA[int~] x:
 							wout[x.a + b.join[a+b]]
 							
-						var a = {use[iGenA[int~][a:a2]} ;; a inherits from iGenA[int~] but renames a to a2
+						var a = {mix[iGenA[int~][a:a2]} ;; a inherits from iGenA[int~] but renames a to a2
 						
 						memberSum[a] ;; throws an exception
 					</code></div>
@@ -2055,7 +2055,7 @@
         				<div class=example>
         					<div><code>
         						var i = {var v}
-        						var x = {use[i:[v:vee]] v=5}
+        						var x = {mix[i:[v:vee]] v=5}
         						var xCast = i!.cast[x]
         						
                                 wout[x.vee]           ;; prints 5
@@ -2718,10 +2718,9 @@
 							</code></p>	
 						</p>
 						
-						<p> One might ask how using <span class=splat>splats</span> in an object literal compare to <span class=use></span> and <span class=mix></span>.
+						<p> One might ask how using <span class=splat>splats</span> in an object literal compare to <span class=mix></span>.
 							The answer is that <span class=splat>splats</span> only splay out normal (non-<span class=privileged></span>) members, 
-								while <span class=use></span> and <span class=mix></span> include 
-								<span class=privileged></span> members as well.
+								while <span class=mix></span> includes <span class=privileged></span> members as well.
 						</p>
 					</td>
 				</tr>
@@ -2809,7 +2808,7 @@
 						<p>	If the object is inherited by another object that overrides a member, or does not inherit that member,
 								an access of that member using <span class=self></span> will reference a hidden copy of that member, 
 								just like an unqualified access would.
-							Renaming an inherited member (with <span class=use></span> or <span class=mix></span>) does not change 
+							Renaming an inherited member (with <span class=mix></span>) does not change
 								the fact that the renamed member points to the same member as the function that used its originally-named counterpart.
 							In fact, if an object inherits two functions that use the same variable name, 
 								those functions will in reality use two different variables (hidden if they aren't inherited, referenced if they're renamed).
@@ -2829,8 +2828,9 @@
 									n = 'hi'
 								}
 								
-								wout[x.func[]]	;; prints 1
-								wout[y.func[]]	;; also prints 2
+								wout[x.func[]]  ;; prints 1
+								wout[y.func[]]  ;; prints 2
+								wout[y.n]       ;; prints 'hi'
 							</code></div>
 						</p>
 						
@@ -3056,7 +3056,7 @@
 					<td><span class=Rvalue>start</span> <span class=Rvalue>end</span></td>
 					<td><p> Returns the list elements of <code>list</code> that were created at or after the time represented by <code>start</code> 
                                 and before (but not at) the time represented by <code>start</code>.
-                            The parameters <code>start</code> and <code>end</code> can either be time objects or futures (or a mix).
+                            The parameters <code>start</code> and <code>end</code> can either be time objects or futures (or a combination).
                             If an argument is a future, the time it represents is the time the future is resolved (when its <code>wait</code> function would be called).
                         </p>
                         
@@ -3507,28 +3507,28 @@
 			<h5>Special constructs that can be used inside the <span class=definitionBlock></span> of an object:</h5>
 			<table class="definitionTable innerBorder">								
 				<tr><td>
-						init:
+						static:
 							<span class=statements></span>
 						
 						
-						init
+						static
 						[<span class=statements></span>
 						]
 					</td>	
-					<td><p>	Initializer.
+					<td><p> Static code run when the object literal's value is created.
 							The <span class=statements></span> are executed on creation of the object (not on copy/inheritance of the object).
-							This is like the static block in Java and <nobr>C++</nobr>.
-							Any variables in the init block are available to the declaration block and object methods, but are 
+							Any variables in the <code>static</code> block are private object members, and so are
 								inaccessible outside that object.
+							This is like the static block in Java and <nobr>C++</nobr>.
 						</p>
-						<p>	Init is run:
-							<ul><li>after any declaration block lines that are before the init block</li>
+						<p>	A static block's statements are run:
+							<ul><li>after any declaration block lines that are before the static block</li>
 								<li>before any declaration block lines that are after it</li>
 							</ul>
 						</p>
 						
-						<p>	For modules, <code>init</code> can be used to modify the context in which it's used,
-								like adding time standards or string encodings.
+						<p>	For modules, <code>static</code> can be used to initialize things the module might need,
+								for example adding time standards or string encodings.
 						</p>
 					</td>
 				</tr>
@@ -3986,7 +3986,7 @@
 				Unlike Python, Lima does not choose Unicode as the be-all end-all standard to convert everything to and from.
 				Unicode, while being a giant leap forward in character encoding, has its own pitfalls and downsides.
 				And unlike Ruby, Lima does not force all strings to carry around their encoding around with them.
-				Instead, Lima does a mix of both: it uses its own abstract character encoding derived from Unicode,
+				Instead, Lima does a combination of both: it uses its own abstract character encoding derived from Unicode,
 					but extended to allow representations of characters from any other encoding inside the same string.
 			</p>
 			<p> Strings are abstract entities containing "characters" that are conceptually encoding independant.
@@ -4701,12 +4701,13 @@
 				
 				<tr><td>standardLibrary</td>	
 					<td>This object represents the entire standard library of Lima.
-						This automatically <code>use</code>d in every module, but if it is explicitly <code>use</code>d,
+						This automatically <code>mix</code>d in every module as <code>private</code>,
+							but if it is explicitly <code>mix</code>d,
 							you can alias or exclude certain parts of the standard library.
 						<div class=example><code>
 							;; includes the whole standard library except wout, and aliases depend to buildDependency 
 							;; (which frees that name up for something else)
-							use[standardLibrary:[! wout depend:buildDependency]
+							private mix[standardLibrary:[! wout depend:buildDependency]
 						</code></div>
 					</td>
 				</tr>
@@ -4996,7 +4997,9 @@
 								<td>Returns an object containing meta data about the passed <span class=lvalue>object</span>.
 									The returned object has the following properties:
                                     <ul><li>type - The type this value has been constrained to.</li>
-                                        <li>operators - An map from operator names to information about that operator.
+										<li>key - The key the object is stored under (eg its variable name, property name, map key, array index, etc).</li>
+                                        <li>const - True if the object is const, false otherwise. This meta-property cannot be changed (its const, how meta ; )</li>
+										<li>operators - An map from operator names to information about that operator.
 											Each value is an object containing the properties:
                                             <ul><li>fn - The function to be called on operands.</li>
                                                 <li>dispatch - A list of objects representing the sub-functions that make up <code>fn</code>'s multiple dispatch list.
@@ -5009,15 +5012,28 @@
                                                                If false, the operator is left-to-right associative (the usual case for most operators).
                                                 </li>
                                                 <li>chains - If true, the operator can chain. If false, the operator can't chain.</li>
+                                                <li>upvalues - A map of the function's upvalues. Each key is an upvalue name, and each value is a reference to its value.
+															   Can be set to a non-reference value (which the implementation of <code>final</code> does).
+												</li>
                                             </ul>
                                             
                                             Note that <code>operators</code> has a custom bracket operator that can take in raw operator tokens in addition to string representations of the operator.
+										</li>
+										<li>inherit - The function used to inherit this value from its containing object.
+													  The <code>mix</code> standard library method uses this to set an objects inherited properties.
+													  In most core and standard objects, this just copies the value to a particular property name.
 										</li>
                                         <li>public - A map of public privileged members. Each key is the name, and each value is the value.</li>
                                         <li>private - A map of private privileged members. Each key is the name, and each value is the value.</li>
                                         <li>hidden - A map of hidden privileged members. Each key is the name, and each value is the value.</li>
                                         <li>properties - A map of normal non-privileged members. Each key is the name, and each value is the value.</li>
-                                        <li>history[time] - 
+                                        <li>destructors - A map from constructor to destructor in the order each was (first) called.
+														  This list will be called in order when an object becomes inaccessible to the rest of the program.
+										</li>
+										<li>initializer - A function run when the object is created. This will already have been run,
+											and unless this meta property is explicitly called in user-code, will never run again.
+										</li>
+										<li>history[time] -
                                             Returns a new object that represents the state of the object at a particular time in the program.
 											The time can be in the future. 
 					    					
@@ -5032,8 +5048,8 @@
 												
 												var oldx = meta[x].history[t1] ;; returns 5							
 											</code></div>
-																						
 										</li>
+										<li>detachmentTime - The time the object will become inaccessible (usually in the future).</li>
                                     </ul>
 									
 									Note: accessing an operator function is a good way to work around objects with operator conflicts. 
@@ -6936,75 +6952,6 @@ Caused by:
 						</p>
 						
 					</td>
-				</tr>	
-					
-				
-				<tr><td><span class=static></span></td>
-					<td><p>	Operates on a variable declaration. It makes the declared variables static - 
-								which means that any object that inherits from that object, and 
-								any object created as a copy of that object will have a reference those same static variables. 
-							That also means that the static variables are still "alive" as long as any object references them.
-						</p>
-						<p>	When a static variable is declared with an initializer, the variable will only be initialized once (when the object/function is created), and never again. 
-						</p>
-						<p class="copiedNote staticFixedNotInFn">	
-							The attributes <span class=static></span> and <span class=fixed></span> have no effect if used inside functions at the top level 
-								(tho of course they have the expected effect when used inside objects that are created in the function).
-							This differs from many languages that allow static function variables. 
-							In Lima, you just need to use a variable in a higher scope.
-						</p>
-					</td>
-				</tr>
-				<tr><td><span class=fixed></span></td>
-					<td><p>	This is like <span class=static></span> except that subobjects that <span class=use></span> or <span class=mix></span> superobjects with a <span class=fixed></span> member
-								get a copy of that member, rather than referencing it. 
-							<div class=example><code>
-								x = 
-								{	fixed a = 4
-									static b = 4
-								}
-								x2 = 
-								{	use x
-								}
-								
-								var y = x
-								var y2 = x2
-								
-								y.a = 1
-								y.b = 2
-								
-								y2.a == 4 ;; true
-								y2.b == 2 ;; true
-							</code></div>
-						</p>
-						<p class=staticFixedNotInFn></p>
-					</td>
-				</tr>
-				<tr><td><span class=const></span></td>
-					<td><p>Makes a variable unchangable.
-						   If the object has any ref variables, the objects they reference can be changed as normal, 
-						     but they can't be pointed to different objects.
-						</p>
-						<p> Note that <span class=const></span> variables are hoisted - they can be accessed before they are defined as soon as the value
-							  the variable is set to resolves to the value it will be when it gets to that line.
-						    Functions that use non-constant upvalues cause an exception to be thrown if they are called before all their 
-                                upvalues are declared.
-						</p>						
-						<div class=example><code>
-							main = fn:
-								wout[f[]] ;; prints 19
-								try: 
-									wout[x] 
-								 e: ;; an expcetion is thrown because x can't yet be resolved
-									someHandling[e]
-                                    
-								y = 5
-								wout[x] ;; prints 5
-								
-								const var x = y
-								const fn! f = fn: ret 42
-						</code></div>
-					</td>
 				</tr>
 				<tr><td><span class=private></span></td>
 					<td>Makes a variable not accessible outside its <span class=module></span>. 
@@ -7013,78 +6960,6 @@ Caused by:
 						<p><span class=private>Private</span> members of compiled files are not externally available 
 							(when statically or dynamically linking to it), while public members are.
 						</p>
-					</td>
-				</tr>
-				
-				<tr><td><span class=final></span></td>
-					<td>Used on functions, causes the closure (the function) to immediately bind its upvalues 
-							(the variables outside that function's immediate inner scope), 
-							so that changes to the upvalues aren't visible to the function itself.
-						This does something similar to what a do-statement does in coffeescript.
-						Note that it is possible to finalize <span class=this></span> and variables accessed via <span class=self></span>.
-						<div class=example><code>
-							;; how a normal closure operates
-							var a = 'hi'
-							var f = fn:
-								wout[a]
-							a = 'no'
-							f[]		;; prints 'no'
-						
-							;; how final changes things:
-							var b = 'hi'
-							var f2 = final fn:
-								wout[b]
-							b = 'no'
-							f[]		;; prints 'hi'
-							
-							;; that last final function is equaivalent to this:
-							var b = 'hi'
-							const var constB = b	;; copy b to another variable
-							var f2 = final fn:
-								wout[constB]		;; use that copy instead
-							b = 'no'				;; changing the original obviously doesn't affect the copy
-							f[]		;; prints 'hi'
-						</code></div>
-						
-						<h5>Bracket Operator:</h5>
-						<table class="methodDefinitionTable innerBorder">
-							<tr><td><span class=bracketOperator></span></td>
-								<td>variableName <span class=more>variableNames</span></td>	
-								<td>Returns an attribute like basic <span class=final></span> that binds only the variables whos names are given in the parameter list.
-									<div class=example><code>
-										var[a=5 b=6]
-										var f = final[a] fn:
-											wout[a' and 'b]
-										a = 10
-										b = 11
-										f[]		;; prints '5 and 11' because a is bound early, but b is left as a free variable
-									</code></div>
-										
-									Note that since the bracket operator is defined for <span class=final></span>, 
-										brackets cannot be used to set this attribute over multiple statements (and so must be written individually).
-								</td>
-							</tr>
-						</table>
-					</td>
-				</tr>
-				
-				
-				<tr><td>operator[ <span class=word>operatorSymbol</span> ]</td>
-					<td> Returns a function that will operate on the input parameter(s) exactly like the operators of those objects.
-					     For example, <code>operator[+][x y]</code> is exactly the same as <code>x+y</code>.
-					</td>
-				</tr>
-
-				<tr><td>include[<span class=word>packagePath</span> <span class=word>packagePath2</span> ...]</td>
-					<td>A convenience function that allows dry module loading.
-						Each <span class=word>packagePath</span> is a string containing the path to a module package to include.
-						Each included module will automatically set a variable with the passed module name.
-						The following are equivalent:
-						<div><code>
-							var[ x=load['x'] y=load['y'] ]
-
-							include['x' 'y']
-						</code></div>
 					</td>
 				</tr>
                 					
@@ -7150,7 +7025,7 @@ Caused by:
 			</table>
 		</div>
 		
-		<div class=subBox1 title="Predefined Attributes">
+		<div class=subBox1 title="Core Attributes">
 			<table class="definitionTable">
 
 				<tr><td><span class=ready></span></td>
@@ -7321,7 +7196,7 @@ Caused by:
 		
 		
 		
-		<div class=subBox1 title="Character Encodings">
+		<div class=subBox1 title="Core Character Encodings">
 			<table class="definitionTable">
 			
 				<tr><td>bits</td>
@@ -7522,7 +7397,7 @@ Caused by:
 	
 	<div class="mainBox mainTitle" title="Standard Library">
 	   
-	   <div class="subBox1" title="Predefined Types">
+	   <div class="subBox1" title="Standard Types">
 			<table class="definitionTable">
 				<tr><td>Infer</td>
 					<td>An inferred type. This is a special type that takes on a type based on the first value the variable is given.
@@ -9446,46 +9321,43 @@ Caused by:
 				<tr><td>load</td>
 					<td><span class=word>module</span> <span class=word>type</span></td>
 					<td><p>	Loads a resource from a library. Usually this is loading a module (as a static or dynamic library).
-							<span class=word>module</span> can either be a module-path (explained below) to the file containing the module, 
-                                or it can be a <code>file!</code> object that contains the file.
-                            <span class=word>type</span> is optional (default='module') and describes whether to load the resource as a file 
-                                or as a module.
+							<span class=word>module</span> can either be a module-path (explained below) to the file containing the module-file.
+                            <span class=word>type</span> is optional (default='module') and describes whether to load the resource as a 'file'
+                                or as a 'module'.
                             If <span class=word>type</span> is <code>"file"</code>, it will return a <code>file!</code> object containing the file.
                             Otherwise, <code>load</code> will return an object representing the module in the file.
 						</p>
                         <p>	A module-path is similar to how node.js <code>require</code> takes paths.
                                     Module resolution is done as follows:
                                 
-                                <ol type="A"><li>If the path starts with "./" or "../", the file is looked for at the given path relative to the loading module</li>
-                                    <li>If not, a "modules" folder is looked for in the directory containing the loading module, and
+                                <ol type="A">
+									<li>If the path starts with "./" or "../", the file is looked for at the given path relative to the loading module</li>
+									<li>If the path starts with "/", the file is looked for at the given absolute path</li>
+                                    <li>Otherwise, a "modules" folder is looked for in the directory containing the loading module, and
                                         <ol><li>If found, the file is looked for at the path relative to that "modules" folder.</li>
                                             <li>If not found, step B is repeated for the parent directory</li>
                                             <li>If still not found, step C is repeated until there are no more accessible parent directories</li>
-                                        </ol>
-                                    </li> 
-                                    <li>If the module still isn't found, it is looked for in the "dependencies" list in the "package.lima" file
-                                        <ol><li>If found and the module-path is just the module's name, the file at the path listed 
-                                                in the property "main" in that module's "package.lima" file, is loaded
-                                            </li>
-                                            <li>If found and the module-path is more than just the module's name, 
-                                                    the file at that path relative to that module's folder, is loaded
-                                            </li>
-                                            <li>If still not found, the program attempts to find the module in the system's (current computer's) module repository.
-                                                If not found there, the program attempts to download the module and install its dependencies in the system's module repository. 
-                                                The module then has a hardlink to the module in the system's module repository 
-                                                    created in the 'modules' folder in the same directory as the entry-point file being run.
-                                                On systems that don't support hardlinks, a copy is made.
-                                            </li>
-                                            <li>If still not found, the program attempts to download the module and install its dependencies.
-                                                The module is downloaded to a 'modules' folder in the same directory as the entry-point file being run.
-                                            </li>
-                                            <li>If downloading the module or installing it doesn't work, <code>load</code> throws an exception</li>
+											<li>If it still isn't found, the first part of the path is looked for in the "dependencies" list in the "package.lima" file,
+													and searched for in the user's lima module installation directory.
+											<ol>
+												<li>If found and the module-path is just the module's name, the file at the path listed
+													in the property "main" in that module's "package.lima" file, is loaded
+												</li>
+												<li>If found and the module-path is more than just the module's name,
+														the file at that path relative to that module's folder, is loaded
+												</li>
+												<li>If not found in the user's module installation directory, the program attempts to download the module
+														and install it and its dependencies in the user's module installation directory.
+												</li>
+											</ol>
+											</li>
+											<li>If the module isn't found in any of the above ways, <code>load</code> throws an exception</li>
                                         </ol>
                                     </li>
                                 </ol>
 						</p>
 						<div class=example><code>
-							use[load['./crypto-v1.0.0.lib']] ;; loads crypto methods in the current scope
+							private mix[load['./crypto-v1.0.0.lib']] ;; loads crypto methods in the current scope
 							
 							md5['something'] ;; hypothetically in the crypto library
 							customLibraryFunction[45 'do something!'] ;; hypothetically from the customLibrary module
@@ -9997,9 +9869,88 @@ Caused by:
 						</p>
 					</td>
 				</tr>
+
+
+				<tr><td><span class=const></span></td>
+					<td><p>Makes a variable unchangable.
+						   If the object has any ref variables, the objects they reference can be changed as normal,
+						     but they can't be pointed to different objects.
+						</p>
+						<p> Note that <span class=const></span> variables are hoisted - they can be accessed before they are defined as soon as the value
+							  the variable is set to resolves to the value it will be when it gets to that line.
+						    Functions that use non-constant upvalues cause an exception to be thrown if they are called before all their
+                                upvalues are declared.
+						</p>
+						<div class=example><code>
+							main = fn:
+								wout[f[]] ;; prints 19
+								try:
+									wout[x]
+								 e: ;; an expcetion is thrown because x can't yet be resolved
+									someHandling[e]
+
+								y = 5
+								wout[x] ;; prints 5
+
+								const var x = y
+								const fn! f = fn: ret 42
+						</code></div>
+					</td>
+				</tr>
+				<tr><td><span class=final></span></td>
+					<td>Used on functions, causes the closure (the function) to immediately bind its upvalues
+							(the variables outside that function's immediate inner scope),
+							so that changes to the upvalues aren't visible to the function itself.
+						This does something similar to what a do-statement does in coffeescript.
+						Note that it is possible to finalize <span class=this></span> and variables accessed via <span class=self></span>.
+						<div class=example><code>
+							;; how a normal closure operates
+							var a = 'hi'
+							var f = fn:
+								wout[a]
+							a = 'no'
+							f[]		;; prints 'no'
+
+							;; how final changes things:
+							var b = 'hi'
+							var f2 = final fn:
+								wout[b]
+							b = 'no'
+							f[]		;; prints 'hi'
+
+							;; that last final function is equaivalent to this:
+							var b = 'hi'
+							const var constB = b	;; copy b to another variable
+							var f2 = final fn:
+								wout[constB]		;; use that copy instead
+							b = 'no'				;; changing the original obviously doesn't affect the copy
+							f[]		;; prints 'hi'
+						</code></div>
+
+						<h5>Bracket Operator:</h5>
+						<table class="methodDefinitionTable innerBorder">
+							<tr><td><span class=bracketOperator></span></td>
+								<td>variableName <span class=more>variableNames</span></td>
+								<td>Returns an attribute like basic <span class=final></span> that binds only the variables whos names are given in the parameter list.
+									<div class=example><code>
+										var[a=5 b=6]
+										var f = final[a] fn:
+											wout[a' and 'b]
+										a = 10
+										b = 11
+										f[]		;; prints '5 and 11' because a is bound early, but b is left as a free variable
+									</code></div>
+
+									Note that since the bracket operator is defined for <span class=final></span>,
+										brackets cannot be used to set this attribute over multiple statements (and so must be written individually).
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
 				
 				<tr><td class=nearTop>
-					<span class=use></span>[
+					<span class=mix></span>[
 						;; object-inheritance statement
 						<span class=object></span> :[
 							;; member statement
@@ -10018,7 +9969,7 @@ Caused by:
 					
 					
 					
-					<span class=use></span>:
+					<span class=mix></span>:
 						<span class=object></span> :
 							<span class=word>memberName</span> : <span class=word>memberAlias</span>
 							<span class=more>member statements</span>
@@ -10044,11 +9995,11 @@ Caused by:
 								<li>Everything inside the not-colon section (<code><span class=object></span> :[! ]</code> or just <code>v:!</code>), 
 										including the not-colon-bracket, is optional.
 									Indicates that all members of the <span class=object></span> will be inherited, 
-										except for the ones listed.
+										except for the ones listed without a memberAlias.
+									Any member *with* a memberAlias will be included as that alias.
 								</li>
 								<li>For a given object-inheritance statement, there may be up to one colon-bracket operator 
-										(either the normal colon-bracket, the non-colon-bracket operator, or neither),
-										defaulting to inheriting all the members when neither colon-bracket operator is used.
+										(either the normal colon-bracket, the non-colon-bracket operator, or neither).
 								</li>
 								<li><span class=word>memberName</span> is the name of the member to inherit 
 										(or not inherit in the case of the not-colon-bracket operator).
@@ -10061,30 +10012,33 @@ Caused by:
 								<li><span class=word>memberAlias</span> is a name in which the calling object will inherit
 										the member given by <span class=word>memberName</span>.
 									These are optional, defaulting to calling the member by its original name.
+									With the colon-not operator, any members that are aliased are *included* with that alias (not excluded).
 									<span class ='useNamesAndAliases'></span>
 								</li>
 								<li><span class=word>memberName</span> and <span class=word>memberAlias</span> can use dot syntax to describe 
 										how sub-members should be inherited.
 									<div class=example><code>
-										use:
-											someObject[a.x]       ;; inherits someObject.a.x (but not any of a's other members)
-											someObject[!b.x]      ;; inherits all of someObject, including b, except b.x
-											someObject[! c.x : c.theXX ] ;; inherits all of someObject, including c, except c.x
-											                             ;; and aliases c.x as c.theXX
+										mix:
+											someObject:  a.x       ;; inherits someObject.a.x (but not any of a's other members)
+										mix:
+											someObject:! b.x       ;; inherits all of someObject, including b, except b.x
+										mix:
+											someObject:! c.x : c.theXX   ;; inherits all of someObject except c.x, including c,
+											                             ;; and then aliases c.x as c.theXX
 									</code></div>
 								</li>
 							</ul>
 							
-							Note that colon and bracket syntax can be mixed and matched.
+							Note that colon and colon-bracket syntax can be mixed and matched.
 						</p>
 						
-						<p>	You can use the result of an expression in this custom function by prefixing the expression
-								with the <code>@</code> sign.
+						<p>	You can use the result of an expression for <code>memberAlias</code> in this custom function by
+								prefixing the expression with the <code>@</code> sign.
 						</p>
 						<p>	
 							<div class=example><code>							
 							
-							use[
+							mix[
 							   redrobin      ;; all members of redrobin are inherited                                                
 							   
 							   someObj2:[! drogon puff.p ]    ;; all members are inherited except drogon and puff.p
@@ -10093,33 +10047,32 @@ Caused by:
 								someObj4:	                  ;; members inherited under aliases
 									a : memberA
 									b : @"memberB"			  ;; using the result of a string as the alias name
-									@"c" : memberC			  ;; using the result of a string as the member name
 									d.x : f.z                 ;; aliasing a submember onto another member entirely (f)
-									@"e.x" : @"e.xx"          ;; string member names for submembers use dot syntax
+									e.x : @"e.xx"          ;; string member names for submembers use dot syntax
 								
 								someObj5:! 
 									operator[<]		     ;; inherits all members except the < operator
-									garth : garthAgain	 ;; and garth is inherited under the alias garthAgain
+									garth : garthAgain	 ;; and someObj5.garth is inherited under the alias garthAgain
 								
 								someObj5: 
 									operator[<] : operator[<<<]	;; inherits an operator as a different operator symbol
 								
 								;; inherit members of other modules
 								load["/C/src/lib/aFile2.lima"]         ;; absolute path
-								load["../lib/aFile.o"]	              ;; path relative to the current file
+								load["../lib/aFile.o"]	               ;; path relative to the current file
 								load["../lib/aFile3.lima"]:[specialMethod fancyMethod]
 							]
 							</code></div>
 							
-							Aliasing and selective inheritance is used to make inhertiance and 
+							Aliasing and selective inheritance is used to make inheritance and
 								<span class=module>module</span> inclusions completely unambiguous. 
 						</p>
 						
 						<p>	Since <span class=module>modules</span> are themselves objects, 
-								<span class=use></span> (in conjunction with <code>lib</code>) is used like 
+								<span class=mix></span> (in conjunction with <code>lib</code>) is used like
 								<code>#include</code> / <code>import</code> in C/Java respectively, <code>extends</code> in java, and 
 								for linking to static libraries.
-							<span class=use></span> does not paste in files verbatim like C includes 
+							<span class=mix></span> does not paste in files verbatim like C includes
 								- only taking code that you need and does not use the rest (preventing program bloat).
 							Also, because of this mechanism, modules that are used in multiple parts of the same program
 								are independantly inherited.
@@ -10131,37 +10084,38 @@ Caused by:
 							In addition, "main.lima" won't see any of the module variables of "C.lima" if it didn't use it.
 							In this way, dependencies can be fully separated, and while you can use module variables similarly to 
 								global variables, it doesn't pollute the namespace of other modules.
+							Note that if the inherited object/module contains <code>ref</code> references,
+								the values pointed to by those references can still be modified in a way that's visible across modules.
 						</p>
 
-						<p><span class=use></span> doesn't nest. 
-							This means that if you <span class=use></span> objectA in objectB, and <span class=use></span> objectB in objectC,
-								it won't be available in objectC unless objectC also uses file A.
-							Also, any modifications to module variables inherited by <code>use</code> will not be seen
-								by other modules/object.
-							This ensures that a module always knows what its dependencies are, 
-								and can't be affected in out-of-band ways by code unless a module explicitly inherits it.
-						</p>
-					</td>
-				</tr>
-				
-				<tr><td><span class=mix></span>[<span class=object></span> <span class=more>objects</span>]</td>	
-					<td><p>	This is exactly like <span class=use></span>, but nests.
-							If the object doesn't <code>use</code> or <code>mix</code> any objects,
-								it <code>mix</code>es in the empty object (<code>{}</code>) by default.
-							
+						<p><span class=mix></span> nests.
+							This means that if you <span class=mix></span> objectA in objectB, and <span class=mix></span> objectB in objectC,
+								it will be available in objectC.
+							When you want to allow objectB to use objectA's members without those members also ending up in objectC
+								(for example when <code>mix</code>ing a module as a dependency),
+								simply use <code>private</code>:
+
 							<div class=example><code>
-							A = {x y}
-							B = 
-							{	mix[A]
-							}
-							C = 
-							{	mix[A B]	;; throws an exception because of conflicting members (since B has already inherited members from A)
-							}
+								private mix:
+									load["dependency1.lima"]
 							</code></div>
 						</p>
 					</td>
 				</tr>
-								
+
+				<tr><td>include[<span class=word>packagePath</span> <span class=word>packagePath2</span> ...]</td>
+					<td>A convenience function that allows dry module loading.
+						Each <span class=word>packagePath</span> is a string containing the path to a module package to load.
+						Each included module will automatically set a variable with the same name (<code>meta[object].name</code>)
+							as the value passed in.
+						The following are equivalent:
+						<div><code>
+							include['x' '../y/someModule']
+
+							var[ x=load['x.lima'] someModule=load['../y/someModule.lima'] ]
+						</code></div>
+					</td>
+				</tr>
 			</table>
 		</div>
 	   
@@ -10277,6 +10231,63 @@ Caused by:
 					x.sort[-v][0]	;; find the maximum
 				</code></div>
 			</li>
+
+			<li title="How to create a static class member">
+				Lima doesn't have a `static` keyword like C++ does, but it can still do the same thing.
+				You just need to use a reference:
+				<div><code>
+					var class = {
+					 	ref myStaticProperty ~> 0
+						make:
+							myStaticProperty += 1
+					}
+
+
+					var newInstance1 = class[]
+					wout[class.myStaticProperty] ;; prints 1
+					wout[newInstance1.myStaticProperty] ;; prints 1
+
+					var newInstance2 = class[]
+					wout[class.myStaticProperty] ;; prints 2
+					wout[newInstance1.myStaticProperty] ;; prints 2
+					wout[newInstance2.myStaticProperty] ;; prints 2
+
+					class.myStaticProperty = 3
+					wout[class.myStaticProperty] ;; prints 3
+					wout[newInstance1.myStaticProperty] ;; prints 3
+					wout[newInstance2.myStaticProperty] ;; prints 3
+
+					newInstance1.myStaticProperty = 4
+					wout[class.myStaticProperty] ;; prints 4
+					wout[newInstance1.myStaticProperty] ;; prints 4
+					wout[newInstance2.myStaticProperty] ;; prints 4
+				</code></div>
+
+				In the above case, its pointing to an immediate value, so changing it isn't a problem.
+				But if you want to create a static variable initialized to a copy of a variable rather than referencing that variable,
+					like static members in C++, just create a copy first:
+				<div><code>
+					var x = 5
+
+					var class = {
+						static: var internalX = x
+					 	ref myStaticProperty ~> internalX
+						make input:
+							myStaticProperty += 11
+					}
+
+					var newInstance1 = class[]
+					wout[class.myStaticProperty] 		;; prints 16
+					wout[newInstance1.myStaticProperty] ;; prints 16
+					wout[x] 							;; prints 5
+
+
+				</code></div>
+
+				Note that there's no equivalent of a static function varibale.
+				This differs from many languages that allow static function variables.
+				In Lima, you just need to use a variable in a higher scope.
+			</li>
 			
 			<li title="How to re-key an array">
 				If you select a slice of a list or something, the keys are preserved. 
@@ -10378,7 +10389,7 @@ Caused by:
 					]
 				}
 				y = 
-				{	use x![t] 		;; using all x's members except t
+				{	private mix x![t] 		;; using all x's members except t
 				
 					t = fn 	  ;; override the old t
 					[	ret privateOldt[].cat['y']
@@ -10389,9 +10400,8 @@ Caused by:
 							as a public member and wouldn't have had to
 							write this method ;;]
 					]
-					
-				 private:
-					use x[t : privateOldt] ;; using x's t member aliased as private member oldt
+
+					private mix x[t : privateOldt] ;; using x's t member aliased as private member oldt
 				}
 				
 				y.t ;; returns 'xy'
@@ -10586,7 +10596,8 @@ Caused by:
 				ref.fn theFunc
 				anonFuncCreator = fn list[string string] characters:	;; takes in a mapping from character to character
 					theFunc ~> fn string a:	;; create anonymous function
-						static list[string string] map = characters
+						var charactersCopy = characters
+						ref.(list[string string]) map ~> charactersCopy
 						
 						if {a} < map.keys:	;; if map has the key a 						 
 							ret map[a]
@@ -10813,7 +10824,7 @@ Caused by:
 				</code>
 			</li>	
 
-			<li title="Creating singletons with static variables">
+			<li title="Creating a singleton with a reference">
 			
 			</li>	
 			<li title="Counting items in a list">
@@ -10893,7 +10904,7 @@ Caused by:
 					Lima instead takes the approach of languages like lua, lisp, and Ruby in providing "mixins" or "traits" rather than parent-child inheritance. 
 					Lima's form of inheritance is what's formally referred to as 'traits' (tho unlike tranditional traits, 
 						objects can inherit state) and are similar to mixins.
-					Members from one object can be <code>mix</code>ed by or <code>use</code>d in another, 
+					Members from one object can be <code>mix</code>ed into another,
 						but there is no sub-class/super-class relationship, and no "is-a".
 				</p>	
 				<p>	Any conflicting members must be explicitly disambiguated (by renaming one or both members, or excluding one or both members).
@@ -11578,7 +11589,7 @@ Caused by:
 					array.len
 					
 					;; extract(var_array)
-					use varArray
+					private mix varArray
 					
 					;; in_array(needle, haystack)
 					{needle} < haystack
@@ -12134,11 +12145,7 @@ Caused by:
 	
 	<div class="mainBox mainTitle" title="Things to mention somewhere">
 		<code pretty="no">            
-		
-		* static x=5 can be replaced with const ref->5
-		* fixed can't be replaced with that ^ ... so...
-		* use vs mix - what happens when object A uses object B which uses from object C? 
-		
+
 			
         * update everything that uses channels with *all* the 'chan' functionality like the || operator
             * still to go: tcp, http			
@@ -12149,15 +12156,7 @@ Caused by:
         * Figure out how you might do something like observee.id(someValue).set(...) perhaps some kind of attribute?
 			
 		* How would you do something like bluebird cancellation?			
-			
-		* Maybe allow 'use' to work inside a function, to unroll a bunch of properties (similar to 'with' in javascript)			
-        * Allow full code written in objects' "definition space", even variables you create are accessible in that scope (things like key:value aren't tho unless you access it via this)
-	   		* This could eliminate the need for the init block and make it obvious that you can use 'use' in a function									
-			
-		* mark which objects in the documentation are "core" (things must be part of the language to express everything)
-            as opposed to "complex" (constructs that can be created from the "core" constructs)
-			* separate some of the stuff into modules like node.js does (eg network/socket stuff, filesystem stuff, etc)
-			
+
 		* custom needs to be fleshed out with functions that can be used to parse the character strings it gets
 		  * Should custom functions return strings that are re-evaluated in context? Probably
 	    * maybe rename custom to "macro" to be more consistent with like all of programming history?
@@ -12167,9 +12166,9 @@ Caused by:
 
 		* a "with" block that blocks out all but specified variables and creates its own scope, as a way to easily define what's used (and what's not). Eg:
 			var x=1, y=2, z=3
-			var result = with x:
+			var result = with x y:
 			   wout[x] // works fine
-			   wout[y] // doesn't work
+			   wout[z] // doesn't work
 			   return x+y
                 
         * optimize needs to have a way to specify things like "optimize this for the 80% most likely inputs"

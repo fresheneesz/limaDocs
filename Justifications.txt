@@ -21,4 +21,4 @@
 	* Even that may not be enough, because even the underlying object that holds the hashmap's values should have a length
 	* It just gets you deeper and deeper into trouble if you combine those namespaces
 
-* changing lazyUnmake (which allowed a variable's constructor - and thus garbage colletion - to be done sometime after the variable can technically be destroyed) to be an attribute of the destructor instead of of individual variables, since a constructor either can or cannot be lazy. No reason to make the programmer decide every time they create a variable.
+* The `inherit` meta property was created to facilitate overriding how properties are inherited. Before this property was created, I envisioned a `fixed` custom function that would create a "static member" of an object that would be shared across instances, but when inherited would create a copy. This way you could keep track of class-specific things. This probably isn't that useful usually tho, so I removed it, but added a way to implement it in user-space if need be.
