@@ -1536,8 +1536,9 @@
 												
 												<p>	Note: <span class=argument>arguments</span> are passed by reference. 
 													If a parameter is modified in a function, it will be changed outside the function as well. 
-													If a statement or literal is passed, conceptually a hidden variable is created that holds the value 
-														(so that methods don't have to worry about whether or not an actual variable/reference was passed).
+													Note that because Lima is value-based, the parameter can just as easily be a literal or statement as it can be a variable,
+														but if it is a direct literal or statement passed into the function, nothing in the scope of the function call would
+														be able to see any changes to that value, since there would be no reference to it.
 												</p>
 												<p>	The IDE should give the programmer insight into if a function mutates the state of passed in variables 
 														(as well as insight into how it can affect the module- or global- state).
@@ -2806,12 +2807,12 @@
 						</p>
 						
 						<p>	If the object is inherited by another object that overrides a member, or does not inherit that member,
-								an access of that member using <span class=self></span> will reference a hidden copy of that member, 
-								just like an unqualified access would.
+								an access of that original member using <span class=self></span> in any method will reference
+								that original member as an upvalue, just like an unqualified access would.
 							Renaming an inherited member (with <span class=mix></span>) does not change
 								the fact that the renamed member points to the same member as the function that used its originally-named counterpart.
-							In fact, if an object inherits two functions that use the same variable name, 
-								those functions will in reality use two different variables (hidden if they aren't inherited, referenced if they're renamed).
+							In fact, if an object inherits two different functions that use same variable name, those functions will
+								have different upvalues for that name.
 							
 							<div class=example><code>
 								var x = {
@@ -4678,20 +4679,7 @@
 								</tr>
 							</table>
 						</td>
-					</tr>					
-					<tr><td>future</td>	
-						<td><table class="definitionTable">
-								<tr><td>!</td>	
-									<td>Described in the section on <code>future</code>.
-									</td>
-								</tr>
-								<tr><td>[<span class=word>type</span>]</td>	
-									<td>Described in the section on <code>future</code>.
-									</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
+					</tr>		
 				</table>
 			</div>					
 		</div>
@@ -5025,7 +5013,6 @@
 										</li>
                                         <li>public - A map of public privileged members. Each key is the name, and each value is the value.</li>
                                         <li>private - A map of private privileged members. Each key is the name, and each value is the value.</li>
-                                        <li>hidden - A map of hidden privileged members. Each key is the name, and each value is the value.</li>
                                         <li>properties - A map of normal non-privileged members. Each key is the name, and each value is the value.</li>
                                         <li>destructors - A map from constructor to destructor in the order each was (first) called.
 														  This list will be called in order when an object becomes inaccessible to the rest of the program.
