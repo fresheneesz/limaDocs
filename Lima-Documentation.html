@@ -65,7 +65,7 @@
 			color: grey;
 		}
 		
-		.copiedNote {	
+		.copiedNote .note {
 			color: rgb(70,70,70);
 		}
 		.copiedNoteDuplicate {
@@ -300,8 +300,8 @@
 					You may write one imperative implementation of an algorithm in Lima, but in compilation is transformed into a very different 
 						algorithm if it would make the program run faster.
 				
-					<p>	Note that I'm using a definition of <i>declarative programming</i> that doesn't require 
-						<a href="http://en.wikipedia.org/wiki/Referential_transparency_(computer_science)">referential transparency</a>.
+					<p>	Note that I'm using a definition of <i>declarative programming</i> that doesn't require
+						full <a href="http://en.wikipedia.org/wiki/Referential_transparency_(computer_science)">referential transparency</a>.
 					</p>
 				</li>    
 				<li><h5>Concurrent-by-default</h5>
@@ -349,10 +349,10 @@
 			
 			And also a couple interesting features:
 			<ul><li><h5>Language Oriented Programming</h5>
-					Lima has the ability to define "custom functions" that are called with user-defined syntax.
-                    This goes beyond lisp and ruby dsls, which are essentially just lists of tokens, and into the realm of 
+					Lima has the ability to define powerful macros that are called with user-defined syntax.
+                    This goes beyond ruby dsls and even lisp, which are essentially just lists of tokens, and into the realm of
 						real, arbitrarily structured language parsing.
-					Custom functions can be a powerful way to extend the language and build domain-specific languages for 
+					Lima macros can be a powerful way to extend the language and build domain-specific languages for
 						use inside larger programs.
 				</li>
 				<li><h5>Build-in package management</h5>
@@ -582,7 +582,7 @@
 					for example, will only exist within the loop block.  
 				However, many (like if and try) do not define new scopes and thus variables defined within them can be used outside of them.
 				In fact, the only core blocks that create new scopes are <code>df</code>, <code>while</code>, <code>thread</code>, and <code>fn</code>.
-				All the flow-control constructs are detailed in the section <b>Predefined Custom Functions</b> 
+				All the flow-control constructs are detailed in the section <b>Predefined Macros</b>
 					(tho not all things there are neccessarily flow-control).
 			</p>
 		</div>
@@ -605,7 +605,7 @@
 			</p>
 			<p>	Bracket-delimited blocks work as expected, but whitespace delimited blocks are more forgiving then their python counterparts.
 				Here's how they work: 
-				When a block is opened (by a custom function name like <code>if</code>), 
+				When a block is opened (by a macro name like <code>if</code>),
 					anything that is more indented than the line in which the block is opened is treated as inside the block.
 				Usually a block will have some data on which to operate preceding a colon.
 				And tabs aren't allowed to be used as indenting (although they are allowed for non-relevant whitespace).
@@ -788,9 +788,9 @@
 				Which has the same affect as:				
 				<div><code>
 				var[a='hi' b='lo']
-				atomic:
-					fn: a=b
-					fn: b=a
+				atomic
+					a: a=b
+					b: b=a
 				wout[a b] 	;; prints 'lohi'
 				</code></div>
 			</div>
@@ -803,8 +803,8 @@
 			
 		<div class="subBox1" title="Order of Operations">
 			These are the order of operations for all binary operators defined by Lima's core language.
-			Unary operators do not have arbitrary order of operations like binary operators,
-				they are always at operator order 1.
+			Dereference Operators, Parens, and Unary operators do not have arbitrary order of operations like binary operators.
+			They always have their listed order of 0 (for dereference and parens) or 1 (for unary operators).
 			
 			<center>(everything is evaluated from left to right except Assignment operators and the ^ operator)</center>
 			<table class="normalTable">
@@ -855,11 +855,75 @@
 				</tr>
 				<tr><td>9</td>
 					<td>Evaluated Last</td>
-					<td>Assignment (evaluated from right to left) and the <span class=nilCoalescer>nil-coalescense operator</span> (evaluated from left to right)</td>
+					<td>Assignment (evaluated from right-to-left) and the <span class=nilCoalescer>nil-coalescense operator</span> (evaluated from left-to-right)</td>
 					<td>= -= += *= ^= /= %= ~> //= | </td>
 				</tr>
 			</table>
-	
+
+			In a given precedence level, left-to-right associative operators are performed first before right-to-left associative operators,
+				which means you can think about right-to-left associative operators as having a half-level higher precedence order
+				(eg for level 5, right-to-left could be thought of as at level 5.5).
+			The resolution order of an expression works like this:
+
+			Note "resolve it" means to resolve the operator on its operands and return to step 1 with the newly simplified expression.
+			Also, half-levels will refer to right-to-left associative operators at the rounded-down level (so the last level is 9.5)
+
+			<style>
+				.counter, .counter ol {
+					counter-reset: section;
+					list-style-type: none;
+				}
+				.counter li::before {
+					counter-increment: section;
+					content: counters(section, ".") '. ';
+				}
+			</style>
+			<ol class="counter">
+				<li>Start at precedence level 0 on the first operand</li>
+				<li>If there is a prefix operator at the current precedence for the current operand, resolve it</li>
+				<li>If the current operand is a macro, resolve it</li>
+				<li>If there is a postfix operator or bracket operator at the current precedence for the current operand, resolve it</li>
+				<li></li>
+				<li>If the current and next operands are only separated by a binary operator at the current precedence and associativity
+					<ol>
+						<li>If the second operand doesn't have a higher precedence postfix, bracket, or binary operator after it, resolve the binary operation</li>
+						<li>If it does have a higher precedence postfix, bracket, or binary operator after it,
+							return to step 2 at precedence level 0 on the next operand
+						</li>
+					</ol>
+				</li>
+				<li>If the expression has resolved to a value, its done</li>
+				<li>Otherwise return to step 2 at the current level plus .5</li>
+			</ol>
+			<!--<ol class="counter">-->
+				<!--<li>Start at precedence level 0 on the first operand</li>-->
+				<!--<li>If the current operand is a macro, resolve it</li>-->
+				<!--<li>If there is a prefix, postfix, or bracket operator at the current precedence for the current operand, resolve it</li>-->
+				<!--<li>If there is a binary operator at the current precedence for the current and previous operand-->
+					<!--<ol>-->
+						<!--<li>If the current operand doesn't have a higher precedence postfix, bracket, or binary operator after it, resolve the binary operation</li>-->
+						<!--<li>If it does have a higher precedence postfix, bracket, or binary operator after it,-->
+							<!--return to step 2 at precedence level 0 on the next operand-->
+						<!--</li>-->
+					<!--</ol>-->
+				<!--</li>-->
+				<!--<li>If the expression has resolved to a value, its done</li>-->
+				<!--<li>Otherwise return to step 2 at the current level plus .5</li>-->
+			<!--</ol>-->
+
+			Example:
+			<div><code>
+				var a={x:1} b={x:2}
+				-a.x + -b.x*4 + 5*6 ;; will resolve to..
+				-1 + -b.x*4 + 5*6 ;; will resolve to..
+				-1 + -2*4 + 5*6 	;; will resolve to..
+				(-1) + (-2)*4 + 5*6 ;; will resolve to..
+				(-1) + (-8) + 5*6 	;; will resolve to..
+				(-9) + 5*6     		;; will resolve to..
+				(-9) + 30          	;; will resolve to..
+				21
+			</code></div>
+
 		</div>
 		
 		<div class="subBox1" title="Operators - Index">
@@ -1097,8 +1161,8 @@
 								which indicates that the current object is in that operand position.
 						</p>
 						<p><span class="Rvalue">order</span> defines what operator precedence it has - 
-								the operator has the same precedence as the other operators in that order numbers.
-							New orders can't be created. 
+								the operator has the same precedence as the other operators that have the same order number.
+							New orders can't be created.
 						</p>
 						
 						<p>	The keyword <code>backward</code> indicates that the operator is right-to-left associative (like <code>=</code>). 
@@ -1244,7 +1308,7 @@
 								someObject.y		;; prints "name: y, value: no value"
 							</code></div>
 							
-							Note that custom functions passed into the dot operator don't need to use the reference-access operator
+							Note that macros passed into the dot operator don't need to use the reference-access operator
 								because the name of the "member" is passed to it, and the value is grabbed based on the name.
 							<div class=example><code>
 								var someObject = {
@@ -1305,12 +1369,12 @@
 							</code></div>
 						</p>
 						
-						<p>	The bracket operators are the only operators that can be overloaded with custom functions.
-							The custom function will only get its first argument - the characters between the brackets (whatever type of brackets they may be).
-							The second argument of a normal custom function will be <code>nil</code>.
+						<p>	The bracket operators are the only operators that can be overloaded with macros (although any operator's operation may return a macro).
+							The macro will only get its first argument - the characters between the brackets (whatever type of brackets they may be).
+							The second argument of a normal macro will be <code>nil</code>.
 							<div class=example><code>
 								var object = {
-									operator [ [** ] = custom input:
+									operator [ [** ] =  input:
 										ret input.split[','].map[ int.parse[v[[c: !{' ' ''@}.has[c] ]]] ].sort[v]
 								}
 								
@@ -1322,18 +1386,16 @@
 				
 				<tr><td>
 						preOperator[ <span class="opsym"></span>
-							order <span class="Rvalue">order</span> <span class="opsym"></span>
+							<span class="opsym"></span>
 						] = <span class=lvalue>function</span>
 
 						postOperator[ <span class="opsym"></span>
-							order <span class="Rvalue">order</span> <span class="opsym"></span>
+							<span class="opsym"></span>
 						] = <span class=lvalue>function</span>
 					</td>
 					<td><p>	Defining or overloading unary operators. 
 							Must not have any parameters.
-							If an expression has both pre and post operators operating on it, the `order` determines which operator is
-								executed first.
-							If they have they have the same order, the pre-operator is executed first.
+							If an expression has both pre and post operators operating on it, the pre-operator is executed first.
 						</p>
 					</td>
 				</tr>
@@ -1380,7 +1442,7 @@
 								[	<span class=more></span>
 								]
 							</td>	
-							<td><code>fn</code> is a custom-function that returns a function immediate (aka function object / nameless function / closure). 
+							<td><code>fn</code> is a macro that returns a function immediate (aka function object / nameless function / closure).
 								This is like nameless functions in javascript and is pretty similar to functions in C, java, or php.
 								
 								<p>	The function's <span class=parameters></span> are defined as a <span class=blockParameter></span>
@@ -1637,7 +1699,7 @@
 								<h5>Special members only available inside functions:</h5>
 								<table class="definitionTable innerBorder">
 									<tr><td>ret</td>	
-										<td><p>	<span class=ret></span> is a custom function that returns a value from a function.
+										<td><p>	<span class=ret></span> is a macro that returns a value from a function.
 												To return nothing, call <span class=ret></span> with nil.
 												<div class=example><code>
 													var cow = fn:
@@ -1663,7 +1725,7 @@
 												</code></div>
 											</p>
 											
-											<p>	Because <span class=ret></span> is a custom function, it can be passed to other functions
+											<p>	Because <span class=ret></span> is a macro, it can be passed to other functions
 													so a function is able to return from a different function higher on the stack.
 												<div class=example><code>
 													var f = fn returnFunction: 
@@ -1782,31 +1844,31 @@
 			</tr>
 			
 			<tr><td style="width:80px;">
-					<span class=custom></span>
+					<span class=macro></span>
 					<span class=word>charsInside</span> <span class=word>charsBefore</span>:
 						<span class=statements></span>
 					
-					<span class=custom></span>
+					<span class=macro></span>
 					[	<span class=more></span>
 					]
 				</td>
-				<td><p>	A <span class=custom></span> function definition.
-						Custom functions must expect two string <span class=argument>arguments</span> that each get code passed into the custom function call.
+				<td><p>	A <span class=macro></span> function definition.
+						Macros must expect two string <span class=argument>arguments</span> that each get code passed into the macro call.
 						<span class=word>charsInside</span> gets the characters that occur between the outer brackets of the function definition 
 							(for <span class=bracketBlock>bracket-blocks</span>) or between the colon and the first non-whitespace character that 
-							does not have a greater indentation then the line the custom function call begins (for <span class=indentationBlock>indentation-blocks</span>). 
+							does not have a greater indentation then the line the macro call begins (for <span class=indentationBlock>indentation-blocks</span>).
 						<span class=word>charsBefore</span> gets the characters found after the function name and before the first bracket 
 							(for <span class=bracketBlock>bracket-blocks</span>) or colon (for <span class=indentationBlock>indentation-blocks</span>)
 							- whichever comes first.
-						Inside the <span class=custom></span> function declaration, 
+						Inside the <span class=macro></span> function declaration,
 							the programmer must define how to translate a function call into "real" lima - probably using Lima's <span class=parse></span> function.
 							
-						Note that when a custom function created with <span class=custom></span> is called, it must have an 
+						Note that when a macro created with <span class=macro></span> is called, it must have an
                              open bracket and closed bracket or be called with a colon.
                         If called with a colon, any lines that have equal or less indentation than the start of the expression the 
                             call is part of are treated as not part of the call.
 					</p>
-					<p>	A custom function needs to be followed by the ~ operator if it needs to be used without being called.
+					<p>	A macro needs to be followed by the ~ operator if it needs to be used without being called.
 					</p>
 					<p>	<table>
 							<tr><td style="width:80px;">
@@ -1814,7 +1876,7 @@
 									<span class=word>customName</span>...:...
 										...
 								</td>
-								<td><span class=custom>Custom</span> function calls. 
+								<td><span class=macro>Custom</span> function calls.
 									Must begin with the function-name, must have a right-bracket (<code>[</code>) or colon (<code>:</code>) sometime after the function name, 
 										and must end with a left-bracket (<code>]</code>) or <span class=undentedCharacter></span>.
 									<span class="copiedNote customFunctionElipsis">
@@ -1829,23 +1891,23 @@
 			</tr>
 			
 			<tr><td style="width:80px;">
-					<span class=realCustom></span>
+					<span class=customMacro></span>
 					 <span class=word>characters</span>:
 						<span class=statements></span>
 					
-					<span class=realCustom></span>
+					<span class=customMacro></span>
 					[	<span class=more></span>
 					]
 				</td>
-				<td><p>	Just like a normal <span class=custom></span> function, except that it doesn't require the call to have a colon or brackets.
+				<td><p>	Just like a normal <span class=macro></span> function, except that it doesn't require the call to have a colon or brackets.
 						It simply gets the string of all the characters that come after it as a parameter, up until one of the characters isn't indented
-							at least one space from expression the custom function is called in.
+							at least one space from expression the macro is called in.
 					</p>
 					<table>
 						<tr><td style="width:80px;">
-								<span class=word>realCustomName</span>...
+								<span class=word>customMacroName</span>...
 							</td>
-							<td>A <span class=realCustom>Real custom</span> function call. 
+							<td>A <span class=customMacro>Real custom</span> function call.
 								<span class=customFunctionElipsis></span>
 							</td>
 						</tr>
@@ -1859,7 +1921,7 @@
 	</div>
 	
 	<div class="mainBox mainTitle" title="Types">
-		<p>	A type is a special kind of custom function that defines variables and constrains the values a variable can take on. 
+		<p>	A type is a special kind of macro that defines variables and constrains the values a variable can take on.
 		 	Unlike most programming languages, types in Lima are basically contracts, otherwise known as <a href="http://en.wikipedia.org/wiki/Guard_(computer_science)">guards</a>. 
 			As contracts, the type of a variable almost never affects normal program execution.
 			Exceptions to this rule are:
@@ -1917,7 +1979,8 @@
 					<a href="http://en.wikipedia.org/wiki/Trait_(computer_programming)">"traits" in SmallTalk</a>, or 
 					<a href="http://www.oreillynet.com/onlamp/blog/2006/08/roles_composable_units_of_obje.html">"roles" in Perl 6</a>
 					in that, since normal objects can be used as interfaces, the interfaces can define 
-					implementations of the members and methods it requires and are fully composable, allowing
+					implementations of the members and methods it requires and are fully composable.
+				This allows for
 					symmetric sum (via <code>mix</code>ing in multiple objects), 
 					aliasing (via <code>mix</code> aliasing),
 					and exclusion (also via exclusion allowed with the normal <code>mix</code> construct).
@@ -2076,7 +2139,7 @@
 	</div>
 	
 	<div class="mainBox mainTitle" title="Attributes">
-		<p>	Context attributes (or just 'attributes') are custom functions that set a value for a statement as a whole (and any underlying calls that statement makes). 
+		<p>	Context attributes (or just 'attributes') are macros that set a value for a statement as a whole (and any underlying calls that statement makes).
 			Attributes have similarities to <a href="http://en.wikipedia.org/wiki/Scope_(computer_science)#Dynamic_scoping">dynamic scoping</a>,
 				since they don't need to be passed to a function to be used by it.
 			An attribute is semi-constant in that it isn't mutable in a given scope, 
@@ -2214,11 +2277,10 @@
 					<tr><td><span class="Lvalue"></span> = <span class="Rvalue"></span></td>
 						<td><p>	
 								Puts the value of <span class="Rvalue"></span> into <span class="Lvalue"></span>.
-								<code>=</code> doesn't return a value (attempting to use the value of an assignment is a syntax error), 
-									but can be chained.
+								<code>=</code> is 'backward' (right-to-left associative) and returns a reference to the value being pointed to.
 								<div class=example><code>
 									x = 5       ;; sets x to 5
-									a=b=c=d= 0	;; sets a, b, c, and d all to 0
+									a=b=c=d = 0	;; sets a, b, c, and d all to 0
 								</code></div>
 							</p>
 						</td>
@@ -2240,8 +2302,14 @@
 							</p>							
 							
 							<p class="copiedNote arrowOperatorChaining">
-								<code>~></code> doesn't return a value, but can be chained.
-								E.g. <code>a~>b~>c~>d~> x	;; sets a, b, c, and d all to point to x</code>.
+								<code>~></code> is 'backward' (right-to-left associative) and returns a reference to the value being pointed to.
+								E.g. <code>a~>b~>c~>d ~> x	;; sets a, b, c, and d all to point to x</code>.
+
+								<code>~></code> can also be used as a unary postfix operator.
+								This is useful when the reference being modified might point to a macro
+									(and IDEs should recognize when someone may have used ~> as a binary operator when they should use the unary operator, and warn the user appropriately).
+								E.g. <code>a~> x	;; sets a, b, c, and d all to point to x</code>.
+								Under the hood, this postfix operator returns a macro that points the reference to the expression following it.
 							</p>
 						</td>
 					</tr>	
@@ -2555,15 +2623,15 @@
 			<table class="definitionTable innerBorder">
 				<tr><td><span class="Rvalue">a</span> == <span class="Rvalue">b</span></td>
 					<td><p><span class="overrides"></span></p>
-						True equality. 
+						True equality.
 						Returns true if both <span class="Rvalue">a</span> and <span class="Rvalue">b</span> contain all the 
-							same keys, and if the values at those keys are all the same.
+							same keys, and if the values at those keys are all the same (when compared with the <code>==</code> operator).
 					</td>
 				</tr>
 				
 				<tr><td><span class="Rvalue">a</span> <> <span class="Rvalue">b</span></td>
 					<td>Set equality. Returns true if all the values contained in <span class="Rvalue">a</span> are also contained in <span class="Rvalue">b</span>.
-						Since types are considered sets in Lima, this can also be used to compare equality of types (meaning comparing two variables containing types, not comparing the types of two variables).
+						Since types are treated as sets in Lima, this can also be used to compare equality of types (meaning comparing two variables containing types, not comparing the types of two variables).
 					</td>
 				</tr>
 				<tr><td><span class="Rvalue">a</span> !<> <span class="Rvalue">b</span></td>
@@ -2740,25 +2808,19 @@
 					<td>The default to-string method returns a string of code for an object-literal containing each non-privileged member in the object.
 					</td>
 				</tr>
-				
-				<tr><td>Len</td>	
-					<td>This <span class=pseudoMember></span> returns the number of non-<span class=privileged></span> public members in the object.
-						For example, the list <code>{0:'a' 1:'b' 2:'c' 9:'d' 'red':'no'}</code> has a <code>len</code> of 5.
-						This member cannot be set(written to).
-					</td>
-				</tr>
-				<tr><td>Len</td>	
+
+				<tr><td>len</td>
 					<td>The number of elements in the list.											
 						This member cannot be set(written to).
 						Is undefined for objects that aren't lists (any object that has had keys modified or added that aren't between 0 and list.len inclusive).
 					</td>
 				</tr>
-				<tr><td>Peeklen</td>	
+				<tr><td>peeklen</td>
 					<td>The number of elements in the list at the time the code is called. 
 						This allows you to get the current length of a list even if its still being populated or is infinitely long.
 					</td>
 				</tr>
-				<tr><td>Keys</td>	
+				<tr><td>keys</td>
 					<td>This <span class=pseudoMember></span> returns a list containing all the keys of 
 							the non-<span class=privileged></span> public members in the object.
 						One way this can be used is to test if an object contains a certain member.
@@ -2767,7 +2829,7 @@
 						This member can be modified to rearrange the keys, but cannot be used to add or remove keys.
 					</td>
 				</tr>
-				<tr><td>IterList</td>	
+				<tr><td>iterList</td>
 					<td>This <span class=pseudoMember></span> returns <code>this</code> by default.
 						Since <span class=df></span> calls <code>IterList</code>, 
 							df will just iterate through the object as one would expect - unless this member is overridden.
@@ -2781,17 +2843,18 @@
 				This is one of the very few cases where Lima has a construct that can't be duplicated by the programmer. 
 			</p>
 			<table class="definitionTable innerBorder">
-				<tr><td><span class=self></span>.</td>	
-					<td><p>Not a true member, <span class=self></span> is a special construct that can be used 
-								to access private members of the object that alias members in an upper scope 
-								(it must be used to access those members, since an unqualified reference to that variable name would be ambiguous).
+				<tr><td><span class=self></span></td>	
+					<td><p><span class=self></span> is a special member that can be used 
+								to access members of the object that alias names in an upper scope 
+								(it's the only way to access private members that alias another name, other than by using reflection, since an unqualified 
+                                reference to that variable name would be ambiguous and <code>this</code> doesn't have access to private variables).
 							It must always be used with the dot operator.
 							
 							<div class=example><code>
 								var n = 5
 								var x = {
 									private:
-                                        nref ~> n   ;; sets up an alias to the outside n
+									    nref ~> n   ;; sets up an alias to the outside n
 									    n=99        ;; private member variable
 									    
 									func = fn:
@@ -2806,12 +2869,12 @@
 							</code></div>
 						</p>
 						
-						<p>	If the object is inherited by another object that overrides a member, or does not inherit that member,
-								an access of that original member using <span class=self></span> in any method will reference
+						<p>	If the object is inherited by another object that either overrides a member or does not inherit that member,
+								an access of that original member using <span class=self></span> in any inherited method will reference
 								that original member as an upvalue, just like an unqualified access would.
 							Renaming an inherited member (with <span class=mix></span>) does not change
 								the fact that the renamed member points to the same member as the function that used its originally-named counterpart.
-							In fact, if an object inherits two different functions that use same variable name, those functions will
+							In fact, if an object inherits two different functions that use same variable name for two different variables, those functions will
 								have different upvalues for that name.
 							
 							<div class=example><code>
@@ -3110,7 +3173,7 @@
 			</table>
 			
 			
-			<h5>Custom methods available by default for any object:</h5>
+			<h5>Macro methods available by default for any object:</h5>
 			<table class="methodDefinitionTable innerBorder">	
 							
 				<tr><td class=nearTop><span class=doubleBracketOperator></span></td>
@@ -3385,8 +3448,10 @@
 				
 				<tr><td>Group</td>
 					<td>[expression]</td>	
-					<td><p>Returns a map of sub-objects where each member in a given sub-object evaluated the <code>expression</code> to the same value.
-					       Each key in the map is the value that the expression was evaluated to
+					<td><p>Returns a map where 
+                             each key is the value that the expression was evaluated to, and
+                             each value is an array of values in the list that all cause the the <code>expression</code> 
+                             to evaluate to the same value.
 						   Keys of lists preserve.
 						</p>
 						
@@ -3555,10 +3620,12 @@
 			
 			<table class="definitionTable">
 				<tr><td><span class=integer></span></td>
-					<td>Base-10 integer. For example:
+					<td>Base-10 integer. Digits can be grouped using single-quotes. For example:
 						<div class=example><code>
 							var x = 34
 							var y = 10000003459999
+							var z = 100'234'346'430
+							var crazy = 10'''234'3543454''45 ;; same as 10234354345445
 						</code></div>
 					</td>
 				</tr>
@@ -3567,27 +3634,31 @@
 							or any (integer) base from base-2 up to base-36. 
 						For bases greater than 10, letters are used for digits higher than 9 (case insensitive). 
 						Bases higher than 36 are not supported in this literal format.
+						Digits can be grouped using single-quotes.
 						<div class=example><code>
 							var w = 2x101	;; binary - x gets 5
 							var x = 16x1A	;; hex - x gets 26
 							var y = 20xD3A0F495B    ;; base-20
 							var z = 36xzf8943lifpwe ;; base-36
+							var a = 20x'be8k'2305'm876
 						</code></div>
 					</td>
 				</tr>
 				<tr><td><span class=decimal></span></td>
-					<td>Base-10 real number.
+					<td>Base-10 real number. Digits can be grouped using single-quotes.
 						<div class=example><code>
 							var x = 1.235
 							var y = .0845
+							var z = 10'230.2343'4634'5
 						</code></div> 
 					</td>
 				</tr>
 				<tr><td><span class=base></span>x<span class=decimal></span></td>
-					<td>Real number written in base <span class=base></span>.
+					<td>Real number written in base <span class=base></span>. Digits can be grouped using single-quotes.
 						<div class=example><code>
 							var x = 2x1.1	;; 1.5 in binary
-							var y = 16x1.8	;; 1.5 in hex 
+							var y = 16x1.8	;; 1.5 in hex
+							var z = 32x1.0000'g000'a53
 						</code></div> 
 					</td>
 				</tr>
@@ -3993,7 +4064,7 @@
 			<p> Strings are abstract entities containing "characters" that are conceptually encoding independant.
 				In practice, like anything else in Lima, the internals will likely choose different encodings for 
 					different situations, using the advantages of different encoding when it makes sense.
-				See the description of LimaEncoding-8 (in the <i>Predefined Variables: Character Encodings</i> section)
+				See the description of limaEnc8 (in the <i>Predefined Variables: Character Encodings</i> section)
 					for description of how this abstract idea is implemented as a real encoding.
 			</p>
 			
@@ -4147,7 +4218,7 @@
 						<td><p>	Returns the string with an extended space character at the end.
 								The width of the extended space is indicated by <span class=lvalue>number</span>.
 								For example, ""%3 is a single space character with the width of 3 single-spaces.
-								Corresponds to LimaEncodings space-extension codepoint. 
+								Corresponds to LimaEncoding's space-extension codepoint.
 							</p>
 						</td>
 					</tr>					
@@ -4163,7 +4234,7 @@
 									"character made from multiple codepoints: "![B4F5FC93]
 								</code></div>
 							</p>
-							<p>	Note that the true operative operators here are <code>!</code> and a custom bracket-operator.
+							<p>	Note that the true operative operators here are <code>!</code> and a macro bracket-operator.
 							</p>
 						</td>
 					</tr>
@@ -4334,7 +4405,7 @@
 						<table class="methodDefinitionTable innerBorder">
 							<tr><td>parse</td>
 								<td>varMap codeString</td>
-								<td>Parses the codeString into an object.
+								<td>Parses the codeString and executes the resulting lima code to build an object.
 									The <code>varList</code> (optional) is an object who's members will be in-scope variables 
 										the evaluated object scope will have access to.
 									<div class=example><code>
@@ -4736,6 +4807,49 @@
 							p ~> y	
 							wout[p] ;; prints 90
 						</code></p>
+
+						More examples:
+
+						<p class=example><code>
+							f = fn int x:
+							  ret x+1
+							g = fn int x:
+							  x++
+							h = fn ref.int x:
+							  x++
+
+							main = fn:
+							  int i = 10
+							  ref.int? p1
+							  ref.ref.int p2
+
+							  p1~		;; exception (p1 doesn't have a value yet)
+
+							  p2 ~> p1 ;; type mismatch exception (p2 can't point to an int)
+							  p2 ~> nil ;; type mismatch exception (p2 can't point to nil)
+							  p2 ~> p1~
+							  wout[p2] ;; undefined variable exception
+							  p1 ~> nil
+							  wout[p2] ;; type mismatch exception (p2 can't point to a reference containing nil)
+
+							  p1 ~> i
+
+							  f[i] ;; returns 11
+							  f[p1] ;; returns 11
+							  f[p2] ;; returns 11
+
+							  g[i] ;; i is now 11
+							  g[p1] ;; i is now 12
+							  g[p2] ;; i is now 13
+
+							  h[i] ;; type mismatch exception (h doesn't take an int value)
+							  h[p1] ;; type mismatch exception (h doesn't take an int value)
+							  h[p2] ;; type mismatch exception (h doesn't take an int value)
+
+							  h[p1~] ;; i is now 14
+							  h[p2~] ;; type mismatch exception (h doesn't take a ref.ref.int value)
+							  h[p2~~] ;; i is now 15
+						</code></p>
 					
 						<p>	Has the following operators:						
 							<table class="definitionTable innerBorder">
@@ -4841,12 +4955,12 @@
 											</div>
 										</p>
 										
-										<p>	This is also used to indicate that you want to use an <span class=attribute></span> or <span class=custom>custom function</span> 
+										<p>	This is also used to indicate that you want to use an <span class=attribute></span> or <span class=macro>macro</span>
 												rather than call it on the proceding code. 
 											For example,
 											<div><code>
 											{int~ fra~ var~} 	;; building an object that contains type attributes
-											function[if~ df~]	;; passing the core custom functions <code>if</code> and <code>df</code> into a method
+											function[if~ df~]	;; passing the core macros <code>if</code> and <code>df</code> into a method
 											</code></div>
 										</p>
 										<p>	Variables can be set to references, but as usual it creates a copy.
@@ -4859,7 +4973,7 @@
 											</code></div>
 										</p>
 										<p>	Using the ~ operator on an object that isn't a reference, 
-												<span class=attribute></span>, or <span class=custom>custom function</span>
+												<span class=attribute></span>, or <span class=macro>macro</span>
 												returns the object itself (ie a no-op) except that it no longer has the ~ operator.
 											This means that while <code>5~</code> is legal, <code>5~~</code> will throw an exception.
 										</p>
@@ -4900,48 +5014,6 @@
 									</td>
 								</tr>
 							</table>
-							
-							
-							<p class=example><code>	
-								f = fn int x:
-								  ret x+1
-								g = fn int x:
-								  x++
-								h = fn ref.int x:
-								  x++
-								
-								main = fn:
-								  int i = 10
-								  ref.int? p1
-								  ref.ref.int p2
-								
-								  p1~		;; exception (p1 doesn't have a value yet)
-								
-								  p2 ~> p1 ;; type mismatch exception (p2 can't point to an int)
-								  p2 ~> nil ;; type mismatch exception (p2 can't point to nil)
-								  p2 ~> p1~
-								  wout[p2] ;; undefined variable exception
-								  p1 ~> nil
-								  wout[p2] ;; type mismatch exception (p2 can't point to a reference containing nil)
-								
-								  p1 ~> i 
-								
-								  f[i] ;; returns 11
-								  f[p1] ;; returns 11
-								  f[p2] ;; returns 11
-								 
-								  g[i] ;; i is now 11
-								  g[p1] ;; i is now 12
-								  g[p2] ;; i is now 13
-								 
-								  h[i] ;; type mismatch exception (h doesn't take an int value)
-								  h[p1] ;; type mismatch exception (h doesn't take an int value)
-								  h[p2] ;; type mismatch exception (h doesn't take an int value)
-								 
-								  h[p1~] ;; i is now 14
-								  h[p2~] ;; type mismatch exception (h doesn't take a ref.ref.int value)
-								  h[p2~~] ;; i is now 15
-							</code></p>
 						</p>
 					</td>
 				</tr>
@@ -4985,14 +5057,23 @@
 								<td>Returns an object containing meta data about the passed <span class=lvalue>object</span>.
 									The returned object has the following properties:
                                     <ul><li>type - The type this value has been constrained to.</li>
+										<li>const - True if the object is const, false otherwise. If this meta-property is true, none of the meta properties can be changed either (its const, how meta ; )</li>
 										<li>key - The key the object is stored under (eg its variable name, property name, map key, array index, etc).</li>
-                                        <li>const - True if the object is const, false otherwise. This meta-property cannot be changed (its const, how meta ; )</li>
+										<li>interfaces - A map of the interfaces the object implements.
+														 Each key is a reference to one of the objects this object implements the interface of,
+															and each value is a map from original property name to aliased property name.
+										</li>
 										<li>operators - An map from operator names to information about that operator.
 											Each value is an object containing the properties:
                                             <ul><li>fn - The function to be called on operands.</li>
                                                 <li>dispatch - A list of objects representing the sub-functions that make up <code>fn</code>'s multiple dispatch list.
                                                     Each element contains the properties:
-                                                    <ul><li>parameters - An object where each key is a parameter name, and each value</li>
+                                                    <ul><li>parameters - An object where each key is a parameter name, and each value is an object containing the properties:
+															<ul><li>name</li>
+																<li>type</li>
+																<li>default</li>
+															</ul>
+														</li>
                                                     </ul>
                                                 </li>
                                                 <li>order - The 'order' number used to determine operator precedence.</li>
@@ -5005,20 +5086,21 @@
 												</li>
                                             </ul>
                                             
-                                            Note that <code>operators</code> has a custom bracket operator that can take in raw operator tokens in addition to string representations of the operator.
+                                            Note that <code>operators</code> has a macro bracket operator that can take in raw operator tokens in addition to string representations of the operator.
+										</li>
+										<li>macro - An object containing the properties:
+											<ul><li>macroAst - The function used to generate a macro's abstract syntax tree.</li>
+												<li>limaAst - The function used to transform the macro's AST into a lima abstract syntax tree.</li>
+											</ul>
 										</li>
 										<li>inherit - The function used to inherit this value from its containing object.
 													  The <code>mix</code> standard library method uses this to set an objects inherited properties.
 													  In most core and standard objects, this just copies the value to a particular property name.
 										</li>
-                                        <li>public - A map of public privileged members. Each key is the name, and each value is the value.</li>
-                                        <li>private - A map of private privileged members. Each key is the name, and each value is the value.</li>
-                                        <li>properties - A map of normal non-privileged members. Each key is the name, and each value is the value.</li>
+                                        <li>privileged - A map of public privileged members. Each key is the name, and each value is the value.</li>
+                                        <li>properties - A map of normal non-privileged members. Each key is the key-value, and each value is the value-value.</li>
                                         <li>destructors - A map from constructor to destructor in the order each was (first) called.
 														  This list will be called in order when an object becomes inaccessible to the rest of the program.
-										</li>
-										<li>initializer - A function run when the object is created. This will already have been run,
-											and unless this meta property is explicitly called in user-code, will never run again.
 										</li>
 										<li>history[time] -
                                             Returns a new object that represents the state of the object at a particular time in the program.
@@ -5274,15 +5356,15 @@
 								</td>
 							</tr>
 							<tr><td>file</td>	
-								<td>Name of the file the currently running line of code originated in.</td>
+								<td>The file name of the current module.</td>
 							</tr>
 							<tr><td>line</td>	
-								<td>Line number of the line of code in the original source file.</td>
+								<td>This pseudo-member returns the line number of the current line of code (from the original source file).</td>
 							</tr>
-							<tr><td>character</td>	
-								<td>Character at which the current statment started in the original source file.
+							<tr><td>column</td>
+								<td>Character-column at which the current statement started in the original source file.
 									If the currently running line has more than one statement, 
-									this would identify which statement by its starting position.
+									this could be used to identify which statement by its starting position.
 								</td>
 							</tr>
 							<tr><td>pid</td>	
@@ -5305,18 +5387,20 @@
 									<code>process.environ</code> members can be added and modified, 
 										but this will not affect the rest of the system.
 								</td>
-							</tr>							
-							
-							<tr><td>rmSigtermHandler[]</td>
-								<td>Removes the default SIGTERM handler, which terminates the process.
+							</tr>
+							<tr><td>moduleCache</td>
+								<td>Holds a map to the modules that have been loaded and run.
+									Setting keys to nil will cause a module import (via <code>use</code> or <code>load</code>)
+										to re-execute the module and store a different instance in the cache.
 								</td>
 							</tr>
+
 							<tr><td>rmSigintHandler[]</td>
-								<td>Removes the default SIGTERM handler, which terminates the process.
+								<td>Removes the default SIGINT handler, which terminates the process.
 								</td>
 							</tr>
 							<tr><td>rmSighupHandler[]</td>
-								<td>Removes the default SIGTERM handler, which terminates the process.
+								<td>Removes the default SIGHUP handler, which terminates the process.
 								</td>
 							</tr>
 						</table>
@@ -5344,7 +5428,7 @@
             								</tr>
             								
             								<tr><td>wait: </td>	
-            									<td>A custom function that waits until the process is complete before running the passed statements.
+            									<td>A macro that waits until the process is complete before running the passed statements.
                                                     See the section on <code>future</code> for more info.
             									</td>
             								</tr>
@@ -5919,7 +6003,7 @@
                         <h5>Pseudo-members:</h5>
 						<table class="definitionTable innerBorder">
 							<tr><td>after: <span class="word">statements</span></td>	
-								<td>A custom function that returns an integer unix timestamp representing the time directly after the <code>statements</code> have run.
+								<td>A macro that returns an integer unix timestamp representing the time directly after the <code>statements</code> have run.
 									<div class="copiedNote unixtimeNotAvailable">
 										Timestamps capturing is still allowed on machines that don't have the actual date or time availble to it,
 											as long as only time-differences (ie durations of seconds) are used.
@@ -5968,7 +6052,7 @@
 								</td>
 							</tr>
 							<tr><td>before: <span class="word">statements</span></td>	
-								<td>A custom function that returns an integer unix timestamp representing the time directly before the <code>statements</code> have run.
+								<td>A macro that returns an integer unix timestamp representing the time directly before the <code>statements</code> have run.
 									<div class="unixtimeNotAvailable"></div>
 									<div class="elaboration">
 										<span class="nowUnixtime"></span>
@@ -6003,7 +6087,7 @@
 							<table class="methodDefinitionTable innerBorder">
 								<tr><td><span class=bracketOperator></span></td>	
 									<td>addressFormat</td>
-									<td>Custom operator that creates an address including IP-address, port, and scope. 
+									<td>Macro operator that creates an address including IP-address, port, and scope.
 										Takes in a few different formats that it detects automatically:
 										<ul><li>IPv4 address or IPv6 address.</li>
 											<li>Address plus port.</li>
@@ -6472,7 +6556,7 @@
 				</tr>				
 			</table>
 		</div>
-		
+
 		<div class="subBox1" title="Core Functions">
 			<table class="methodDefinitionTable">
 				<tr><td>exit</td>
@@ -6483,11 +6567,38 @@
 				</tr>
 			</table>
 		</div>
+
 		
 		
-		
-		<div class=subBox1 title="Core Custom Functions">
+		<div class=subBox1 title="Core Macros">
 			<table class="definitionTable">
+				<tr><td><span class=const></span></td>
+					<td><p>Makes a variable unchangable.
+						   If the object has any ref variables, the objects they reference can be changed as normal,
+						     but they can't be pointed to different objects.
+						</p>
+						<p> Note that <span class=const></span> variables are hoisted - they can be accessed before they are defined as soon as the value
+							  the variable is set to resolves to the value it will be when it gets to that line.
+						    Functions that use non-constant upvalues cause an exception to be thrown if they are called before all their
+                                upvalues are declared.
+						</p>
+						<div class=example><code>
+							main = fn:
+								wout[f[]] ;; prints 19
+								try:
+									wout[x]
+								 e: ;; an expcetion is thrown because x can't yet be resolved
+									someHandling[e]
+
+								y = 5
+								wout[x] ;; prints 5
+
+								const var x = y
+								const fn! f = fn: ret 42
+						</code></div>
+					</td>
+				</tr>
+				
 				<tr><td>
 						<span class=if></span>
 						 <span class=condition></span>:
@@ -6719,40 +6830,48 @@ Caused by:
 				</tr>
 				
 				<tr><td>
-						atomic:
-							<span class=lvalue>function</span>
-							<span class=more>functions</span>
-							
-							
-							
-						atomic[
-							<span class=lvalue>function</span>
-							<span class=more>functions</span>
+						atomic <span class=word>atomicHandle</span>
+							<span class=statements></span>
+
+						atomic <span class=word>atomicHandle</span>[
+							<span class=statements></span>
+						]
+
+						atomic <span class=word>atomicHandle</span>
+						 <span class=word>name</span>:
+							<span class=statements></span>
+						 <span class=more>blocks</span>
+
+						atomic <span class=word>atomicHandle</span>[
+						 <span class=word>name</span>:
+							<span class=statements></span>
+						 <span class=more>blocks</span>
 						]
 					</td>
-					<td><p>	Takes any number of <span class=lvalue>function</span>s.
-							Calls each function in an atomic way - all activity that happens within each function
+					<td><p>	Calls each block in an atomic way - all activity that happens within each block
 								will not be visible to other code until that function is complete.
-							The calls are also mutually-atomic - each function will be run on the program state as it was before the atomic block.
-							Any <code>thread</code> created inside the atomic block will begin once the atomic block ends.
+							The blocks are also mutually-atomic - each block will be run on the program state as it was before the atomic block.
+							Any <code>thread</code> created inside the atomic block will begin once the atomic block ends unless that thread is waited on in the atomic block.
                             If there is a conflicting change, as soon as the conflict is detected, 
-								the function that caused the conflict throws an exception from that point.
+								the block that caused the conflict throws an exception from that point.
 						</p>	
 						<p>
-						    If an exception happens in one of the functions and is not handled in the atomic block,
+						    If an exception happens in one of the blocks and is not handled within the atomic block,
                                 an exception will be thrown out of the atomic block that has an <code>errors</code> property,
                                 containing the list of exceptions that happened in that atomic block.
                             Any state changed within it will be kept (ie not rolled back).
 						</p>
-									
-						<h5>The following pseudo-member is available inside an atomic block:</h5>
+
+						<p>The <code>atomicHandle</code> is a handle-object that's accessible within each of its named blocks.
+						   The returned object has the following methods:
+						</p>
 						<table class="definitionTable innerBorder">
-							<tr><td>atomic.rollback</td>	
-								<td>Rolls back any changes made in the function it is called in.
+							<tr><td>atomicHandle.rollback[name]</td>
+								<td>Rolls back any changes made in the block with the passed name.
 								</td>
 							</tr>
-							<tr><td>atomic.rollbackAll</td>	
-								<td>Rolls back any changes made in all functions in the atomic block.
+							<tr><td>atomicHandle.rollbackAll[]</td>
+								<td>Rolls back any changes made in all blocks in the atomic block.
 								</td>
 							</tr>
 						</table>
@@ -6767,11 +6886,11 @@ Caused by:
 							<code>
 								var x = 50
 								
-								thread: 
+								rawthread:
 									var y = x
 									wout['y: 'y]
 										
-								atomic: fn:
+								atomic printX:
 									x -= 1
 									wout['x-1: 'x]
 									x += 1
@@ -6788,9 +6907,9 @@ Caused by:
 							
 							<code>
 							var x=7
-							atomic:
-								fn: x += 1
-								fn: x += 2
+							atomic plusX
+							  plus1: x += 1
+							  plus2: x += 2
 							</code>
 							
 							<p>	The above code throws an exception.
@@ -6799,10 +6918,10 @@ Caused by:
 							<code>
 								var x = 10
 								var y = 20
-								atomic: 
-									fn: x = 15
-									fn: y = 25
-										atomic.rollback
+								atomic xy
+									x: x = 15
+									y: y = 25
+										xy.rollback['y']
 							</code>
 						
 							<p>	In the above example, the value of x is changed to 15, but the value of y remains 20.
@@ -6810,7 +6929,61 @@ Caused by:
 						</div>
 					</td>
 				</tr>
-					
+
+				<tr><td class='nearTop'>
+                        change[<span class=word>testStatement</span><span class=optional>:<span class=word>oldValue</span></span> <span class=more>changeStatments</span>]:
+							<span class=word>statements</span>
+					</td>
+					<td><p>	On-change event statement.
+							The <span class=word>statements</span> are run when one of the given <span class=word>testStatement</span>s changes value.
+							For each <span class=word>testStatement</span>, <span class=word>oldValue</span> (and the preceding colon) is optional,
+                                but if declared, the name given for <span class=word>oldValue</span> can be
+                                used to access the previous value of the <span class=word>testStatement</span>.
+						</p>
+
+						<p> Returns an object with the following pseudo-methods
+
+                            <ul><li><code>stop</code> - stops the listener (the event-handler won't
+                                        be run for subsequent changes to the <span class=word>testStatement</span>).
+                                </li>
+                            </ul>
+						</p>
+
+						<p> The event-handler is triggered synchronously on change of whatever variable caused the <span class=word>testStatement</span>
+						      to change.
+						    After any triggered event-handlers run, the code that triggered the change is continued from.
+                            Any event-handler triggered simultaneously in a <code>change</code> event are executed in parallel <code>atomic</code> blocks.
+						</p>
+
+						<div class=elaboration>
+							<div><code>
+                                var x = 5
+                                change[x]:
+                                    wout['x changed to 'x]
+
+                                x = 6
+                                ;; the event handler prints to the console before the following statement
+                                wout['hi']
+
+                                ;; keep track of the change in value
+                                var delta = 0
+                                change[x<5:lastValue]:
+                                    delta = lastValue - x
+
+                                ;; maintain a = 2*b+c^2
+                                var a = 2*b+c^2
+                                change[c b]:
+                                    a = 2*b+c^2
+							</code></div>
+
+                            <p> Note that you have full control over the number of times the statements are executed
+								    because one event is handled fully before the next event can be handled.
+							    Even though an event is fully handled before the next one is handled,
+								    all events are guaranteed to be caught, even if one happens while another one is being handled.
+							</p>
+						</div>
+					</td>
+				</tr>
 				
 				<tr><td>future</td>
 					<td>When run on a statement (or set of statements), returns a future object. 
@@ -6824,7 +6997,7 @@ Caused by:
 									- meaning that code will only block when it needs a value inside <code>val</code> to continue.
 								This property can only be set once, and throw an exception if set again. 
                             </li>
-                            <li><code>wait: statements</code> - A custom function that runs the <code>statements</code> 
+                            <li><code>wait: statements</code> - A macro that runs the <code>statements</code>
 									only after all inputs and outputs inside the original statement are complete.									
 								Note that the statements inside the <code>wait</code> are *not* asynchronous, 
 		                            statements after the <code>wait</code> that rely on values determined inside the wait still implicitly wait
@@ -6940,16 +7113,6 @@ Caused by:
 						
 					</td>
 				</tr>
-				<tr><td><span class=private></span></td>
-					<td>Makes a variable not accessible outside its <span class=module></span>. 
-						<p class="privateProtectedNote"></p>
-						
-						<p><span class=private>Private</span> members of compiled files are not externally available 
-							(when statically or dynamically linking to it), while public members are.
-						</p>
-					</td>
-				</tr>
-                					
 			
 				<tr><td>assert[ <span class=lvalue>statement</span> probability=1 ]</td>	
 					<td><p>Asserts that the <span class=lvalue>statement</span> is true at a given point in the code with a probability of <code>probability*100</code> percent 
@@ -6982,7 +7145,7 @@ Caused by:
 				
 						optimize[cputime memory power: metricStatement ]: statements
                     </td>
-					<td>Creates an optimizer custom-function, which will optimize the code its run on such that the value of the 
+					<td>Creates an optimizer macro, which will optimize the code its run on such that the value of the
 							passed <code>metricStatement</code> is minimized.
 		                The variables <code>cputime</code>, <code>memory</code>, and <code>power</code> are implicitly defined, 
                             but may be renamed by passing names in before a colon (eg <code>optimize[c m: c+4*m+10*power]</code>).
@@ -7191,8 +7354,8 @@ Caused by:
 					</td>
 				</tr>
 			
-				<tr><td>LimaEncoding-8</td>
-					<td><p>	LimaEncoding is a physical (bits) representation of what a string is in Lima. 
+				<tr><td>limaEnc8</td>
+					<td><p>	limaEnc8 is a physical (bits) representation of what a string is in Lima.
 							LimaEncoding can represent any string from any encoding,
 								encapsulate the encoding within it if necessary.
 						</p>
@@ -7206,7 +7369,7 @@ Caused by:
 							LimaEncoding always uses big-endian byte ordering, and thus does not have a byte-order mark.
 							The Unicode characters LimaEncoding supports without using the alternate character markers (described below)
 								are called LimaEncodings core characters.
-							LimaEncoding-8 stores unicode characters in UTF-8 format.
+							limaEnc8 stores unicode characters in UTF-8 format.
 						</p>
 							
 						<p>	It also adds the following codepoints:
@@ -7229,7 +7392,7 @@ Caused by:
 													where 
 													<ul><li><code>&lt;length></code> is a 16-bit length of the number of bytes in <code>&lt;encoding></code> minus 1.
 														</li>
-														<li><code>&lt;encodingName></code> is the string representation (ie the standard name) of the encoding represented only by core-characters of LimaEncoding-8 (ie. the subset of UTF-8 without control characters).
+														<li><code>&lt;encodingName></code> is the string representation (ie the standard name) of the encoding represented only by core-characters of limaEnc8 (ie. the subset of UTF-8 without control characters).
 														</li>
 													</ul>
 												</li>
@@ -7314,17 +7477,17 @@ Caused by:
 						</p>						
 						
 						<p>	Since most characters have a unicode representation, special characters will be very infrequently used.
-							So strings encoded in LimaEncoding-8 will usually be identical to its UTF-8 counterpart.
+							So strings encoded in limaEnc8 will usually be identical to its UTF-8 counterpart.
 						</p>
 				
 					</td>
 				</tr>
-				<tr><td>LimaEncoding-16</td>
-					<td>Exactly like LimaEncoding-8 but the representation of the core-characters is UTF-16.
+				<tr><td>limaEnc16</td>
+					<td>Exactly like limaEnc8 but the representation of the core-characters is UTF-16.
 					</td>
 				</tr>
 				
-				<tr><td>UTF-8</td>
+				<tr><td>utf8</td>
 					<td>
 					</td>
 				</tr>
@@ -7339,7 +7502,7 @@ Caused by:
 			
 			<table class="methodDefinitionTable">
 				
-				<tr><td>UTF-32</td>
+				<tr><td>utf32</td>
 					<td><span class=word>tabWidth</span> <span class=word>endianness</span></td>
 					<td><p>	UTF-32 with the given endianness.
 							<span class=word>endianness</span> can either be 'big' or 'little', defaulting to 'big' if not passed.
@@ -7353,7 +7516,7 @@ Caused by:
 						</p>
 					</td>
 				</tr>
-				<tr><td>UTF-16</td>
+				<tr><td>utf16</td>
 					<td><span class=word>spacesInATab</span> <span class=word>endianness</span></td>
 					<td>UTF-16. The parameters mean the same thing as for UTF-32.
 					</td>
@@ -7737,7 +7900,7 @@ Caused by:
 						<h5>Pseudo-members:</h5>
 						<table class="definitionTable innerBorder">
 							<tr><td>after: <span class="word">statements</span></td>	
-								<td>A custom function that returns a time object representing the current time directly after the <code>statements</code> have run.
+								<td>A macro that returns a time object representing the current time directly after the <code>statements</code> have run.
 									<div class="copiedNote timeNotAvailable">
 										Time capturing is still allowed on machines that don't have the actual date or time availble to it,
 											as long as the times are only used to create durations.
@@ -7782,7 +7945,7 @@ Caused by:
 								</td>
 							</tr>
 							<tr><td>before: <span class="word">statements</span></td>	
-								<td>A custom function that returns a time object representing the current time directly before the <code>statements</code> have run.
+								<td>A macro that returns a time object representing the current time directly before the <code>statements</code> have run.
 									<div class="timeNotAvailable"></div>
 									<div class="elaboration">
 										<span class="nowtime"></span>
@@ -7835,7 +7998,7 @@ Caused by:
 							</tr>
 							<tr><td>p</td>
 								<td><span class=word>pattern</span></td>	
-								<td><p>	Custom function that creates a time-pattern that can be used to both parse and format time objects.
+								<td><p>	Macro that creates a time-pattern that can be used to both parse and format time objects.
 										Keywords and strings are concatenated to describe the pattern.
 										The <code>$</code> operator can be used to indicate that more than one pattern can be used.
 										Parts that are surrounded by parentheses are optional (the whole thing in parens should match, or none of it).
@@ -9175,7 +9338,34 @@ Caused by:
 						</p>
 					</td>
 				</tr>
-								
+
+				<tr><td>lion</td>
+					<td><p>Object for parsing and outputting LiON notation strings.
+
+							<table class="definitionTable innerBorder">
+								<tr><td>[value]</td>
+									<td>Returns a string representing the passed value. Only outputs normal properties of the object (not privileged members).
+										<div><code>
+											lion[5]       		;; outputs "5"
+											lion[{1 2 3}] 		;; outputs "{1 2 3}"
+											lion[{'a':3 'b':{'d':4}}] ;; outputs "{a=3 b={d=4}}"
+										</code></div>
+									</td>
+								</tr>
+								<tr><td>parse[string]</td>
+									<td>Returns the value represented by the LiON string.
+										<div><code>
+											lion.parse["5"]     ;; outputs 5
+											lion.parse["{1 2 3}"] 	;; outputs {1 2 3}
+											lion.parse["{a=3 b={d=4} c=~{"b" "d"}}"] ;; outputs {'a':3 'b':{'d':4}}
+										</code></div>
+									</td>
+								</tr>
+							</table>
+						</p>
+					</td>
+				</tr>
+
 			</table>
 	   </div>
 	   
@@ -9280,6 +9470,12 @@ Caused by:
 					<td>Shorthand for <code>value1.cat[value2 value3 ...]</code>
 					</td>
 				</tr>
+
+				<tr><td><span class=word>toCodeString</span></td>
+					<td>value</td>
+					<td>Outputs a Lima code string representing that value.
+					</td>
+				</tr>
 									
 				<tr><td>access</td>
 					<td>get set</td>
@@ -9308,7 +9504,9 @@ Caused by:
 				<tr><td>load</td>
 					<td><span class=word>module</span> <span class=word>type</span></td>
 					<td><p>	Loads a resource from a library. Usually this is loading a module (as a static or dynamic library).
-							<span class=word>module</span> can either be a module-path (explained below) to the file containing the module-file.
+							<span class=word>module</span> can either be a module name,
+								a module-path (explained below) to the file containing the module-file, or
+								a module-path with a version (eg <code>load['someModule@1.0.1/some/internal/module']</code>.
                             <span class=word>type</span> is optional (default='module') and describes whether to load the resource as a 'file'
                                 or as a 'module'.
                             If <span class=word>type</span> is <code>"file"</code>, it will return a <code>file!</code> object containing the file.
@@ -9338,9 +9536,10 @@ Caused by:
 												</li>
 											</ol>
 											</li>
-											<li>If the module isn't found in any of the above ways, <code>load</code> throws an exception</li>
                                         </ol>
                                     </li>
+									<li>If the module isn't found in any of the above ways, the path is appended with '.lima' and steps are tried again.</li>
+									<li>If the module still isn't found, <code>load</code> throws an exception</li>
                                 </ol>
 						</p>
 						<div class=example><code>
@@ -9352,6 +9551,10 @@ Caused by:
 							;; you can also use it as a standalone object
 							var websocket = load['websocket']
 							websocket.connect['ws://localhost'] ;; calls the connect function from that library
+
+							;; you can also specify a version
+							var markdownHelper = load['markdown@2.0.0/dist/helper']
+							websocketHelper.parse['### hi']
 						</code></div>
 							
 						<p>	Examples of types of packages you would use with this: lima source files (uncompiled libraries),
@@ -9473,17 +9676,10 @@ Caused by:
 							to the old object, you'll get the new object (with respect to non-privileged members of course). 
 					</td>
 				</tr>
-				
-				<tr><td>exit</td>
-				    <td>code</td>
-					<td>A function that exits the program with the passed exit code.
-					    This behavior can be overridden using the <code>exitFn</code> attribute.
-					</td>
-				</tr>
 			</table>
 		</div>
 	   
-		<div class=subBox1 title="Standard Custom Functions">
+		<div class=subBox1 title="Standard Macros">
 			<table class="definitionTable">
 
 				<tr><td><span class=wout></span></td>
@@ -9564,7 +9760,7 @@ Caused by:
 						</p>
 						<p>	<table class="definitionTable">
 								<tr><td><span class=break></span></td>
-									<td><p>	Custom function that jumps straight out of the loop, skipping any lines of code in the current loop's block.
+									<td><p>	Macro that jumps straight out of the loop, skipping any lines of code in the current loop's block.
 											If referenced from a pointer, <code>break</code> will jump to the break location for where it was referenced from:
 											<div><code>
 												df:	;; infinite loop
@@ -9586,7 +9782,7 @@ Caused by:
 									</td>
 								</tr>
 								<tr><td><span class=continue></span></td>
-									<td><p>	Custom function that skips the rest of the loop and continues with the next iteration of the loop.
+									<td><p>	Macro that skips the rest of the loop and continues with the next iteration of the loop.
 											
 										</p>
 										<p>	<code>continue</code> has one member:
@@ -9682,61 +9878,6 @@ Caused by:
 								</tr>
 							</table>
 						</p>
-					</td>
-				</tr>
-				
-				<tr><td class='nearTop'>
-                        change[<span class=word>testStatement</span><span class=optional>:<span class=word>oldValue</span></span> <span class=more>changeStatments</span>]:
-							<span class=word>statements</span>
-					</td>
-					<td><p>	On-change event statement.
-							The <span class=word>statements</span> are run when one of the given <span class=word>testStatement</span>s changes value. 
-							For each <span class=word>testStatement</span>, <span class=word>oldValue</span> (and the preceding colon) is optional, 
-                                but if declared, the name given for <span class=word>oldValue</span> can be 
-                                used to access the previous value of the <span class=word>testStatement</span>.
-						</p>
-						
-						<p> Returns an object with the following pseudo-methods 
-                        
-                            <ul><li><code>stop</code> - stops the listener (the event-handler won't 
-                                        be run for subsequent changes to the <span class=word>testStatement</span>).
-                                </li>
-                            </ul>
-						</p>
-						
-						<p> The event-handler is triggered synchronously on change of whatever variable caused the <span class=word>testStatement</span>
-						      to change.
-						    After any triggered event-handlers run, the code that triggered the change is continued from.
-                            Any event-handler triggered simultaneously in a <code>change</code> event are executed in parallel <code>atomic</code> blocks.
-						</p>
-						
-						<div class=elaboration>	
-							<div><code>
-                                var x = 5
-                                change[x]:
-                                    wout['x changed to 'x]
-                                    
-                                x = 6
-                                ;; the event handler prints to the console before the following statement
-                                wout['hi']
-                                
-                                ;; keep track of the change in value
-                                var delta = 0
-                                change[x<5:lastValue]:
-                                    delta = lastValue - x
-                                    
-                                ;; maintain a = 2*b+c^2
-                                var a = 2*b+c^2
-                                change[c b]:
-                                    a = 2*b+c^2
-							</code></div>
-						
-                            <p> Note that you have full control over the number of times the statements are executed
-								    because one event is handled fully before the next event can be handled.
-							    Even though an event is fully handled before the next one is handled, 
-								    all events are guaranteed to be caught, even if one happens while another one is being handled.
-							</p>
-						</div>
 					</td>
 				</tr>
 				
@@ -9857,31 +9998,13 @@ Caused by:
 					</td>
 				</tr>
 
+				<tr><td><span class=private></span></td>
+					<td>Makes a variable not accessible outside its <span class=module></span>.
+						<p class="privateProtectedNote"></p>
 
-				<tr><td><span class=const></span></td>
-					<td><p>Makes a variable unchangable.
-						   If the object has any ref variables, the objects they reference can be changed as normal,
-						     but they can't be pointed to different objects.
+						<p><span class=private>Private</span> members of compiled files are not externally available
+							(when statically or dynamically linking to it), while public members are.
 						</p>
-						<p> Note that <span class=const></span> variables are hoisted - they can be accessed before they are defined as soon as the value
-							  the variable is set to resolves to the value it will be when it gets to that line.
-						    Functions that use non-constant upvalues cause an exception to be thrown if they are called before all their
-                                upvalues are declared.
-						</p>
-						<div class=example><code>
-							main = fn:
-								wout[f[]] ;; prints 19
-								try:
-									wout[x]
-								 e: ;; an expcetion is thrown because x can't yet be resolved
-									someHandling[e]
-
-								y = 5
-								wout[x] ;; prints 5
-
-								const var x = y
-								const fn! f = fn: ret 42
-						</code></div>
 					</td>
 				</tr>
 				<tr><td><span class=final></span></td>
@@ -10019,7 +10142,7 @@ Caused by:
 							Note that colon and colon-bracket syntax can be mixed and matched.
 						</p>
 						
-						<p>	You can use the result of an expression for <code>memberAlias</code> in this custom function by
+						<p>	You can use the result of an expression for <code>memberAlias</code> in this macro by
 								prefixing the expression with the <code>@</code> sign.
 						</p>
 						<p>	
@@ -10090,17 +10213,40 @@ Caused by:
 					</td>
 				</tr>
 
-				<tr><td>include[<span class=word>packagePath</span> <span class=word>packagePath2</span> ...]</td>
+				<tr><td>use[<span class=word>packagePath</span> <span class=word>packagePath2</span> ...]</td>
 					<td>A convenience function that allows dry module loading.
 						Each <span class=word>packagePath</span> is a string containing the path to a module package to load.
-						Each included module will automatically set a variable with the same name (<code>meta[object].name</code>)
-							as the value passed in.
+						Each passed module module path will automatically set a variable with the same file name
+							as the value passed in (minus the extension).
 						The following are equivalent:
 						<div><code>
-							include['x' '../y/someModule']
+							use['x@2.1.0' '../y/someModule']
 
-							var[ x=load['x.lima'] someModule=load['../y/someModule.lima'] ]
+							var[ x=load['x@2.1.0'] someModule=load['../y/someModule.lima'] ]
 						</code></div>
+					</td>
+				</tr>
+
+				<tr><td>with <span class=word>variable1</span> <span class=word>variable2</span> ...:
+							<span class=statements></span>
+					</td>
+					<td>A <code>with</code> block creates a new isolated scope that only passes through the ability to modify the specified variables.
+						The return value of the statements are returned from the <code>with</code> call.
+						Allows a programmer to easily section off blocks of code that are relatively independent,
+							which can make it a lot easier to refactor later, especially if you want to turn those blocks into separate functions.
+						<div><code>
+							var x=1, y=2, z=3
+							var result = with x y:
+								var c = 3
+							   	wout[x]  ;; works fine
+							   	wout[z]  ;; doesn't work
+							   	return x+y+c
+							wout[c] ;; doesn't work because the c defined inside the with block isn't in scope
+						</code></div>
+
+						<span class="note">
+							Lima's <code>with</code> block is what Jai calls a "capture".
+						</span>
 					</td>
 				</tr>
 			</table>
@@ -10124,58 +10270,11 @@ Caused by:
 				</code></div>
 				Because lima should optimize this, using sort should be just as good as using the length.
 			</li>
-			
-			
-			<li title="Default function parameters defined recursively">
-				<code>
-					fn functionName
-					 int[a b]: 
-					      ret a+b
-					 int a: 
-					      ret fn.this[a 1] ;;[ here, if the function is called with only one argument, 
-					                            then b defaults to 1 ;;]
-				</code>
-			</li>
-			
-			<li title="How to access shadowed variable names using self.">
-				<code>
-					var x = 5      ;; x1
-					var y = {      ;; y1
-					  x= 10         ;; x2
-					  y= fn a:      ;; y2 (naming the parameter x instead of a is illegal here)
-					     var x1~>self.x~
-					     var y = {   ;; y3
-					     	x2~>self.x~
-					        x=10      ;; x3
-					        y=fn b:   ;; y4 (naming the parameter x instead of b is illegal here)
-					           self.x ;; references x3
-					           x1     ;; references x1
-					    	   ;; trying to access 'x' here is illegal
-					     }
-					}
-				</code>
-			</li>			
+						
 			
 			<li title="How to get all the unique values in a list">
-				<code>x.group[v][0]</code>
+				<code>x.group[v].keys</code>
 			</li>
-			
-			<li title="How to strip whitespace (or other things)">
-				<code>
-					;; right stripping spaces and extended spaces
-					var rstrip = fn aString:
-						var str = aString
-						df str v k: if v == ' ' $ v.name == 'extendedSpace': str.=rm[k] else: break
-						ret str
-					
-					;; left strip
-					var rstrip = fn aString:
-						ret rstrip[aString.sort[-k]]	;; right strip the reversed string
-				</code>
-				
-				This pattern can be used to strip any type of characters.
-			</li>			
-		
 			
 			<li title="How to emulate the do-while loop from C">
 				To emulate a do-while, you can have an infinite loop that has a break condition at the end of it:
@@ -10224,7 +10323,7 @@ Caused by:
 				You just need to use a reference:
 				<div><code>
 					var class = {
-					 	ref myStaticProperty ~> 0
+						ref myStaticProperty ~> 0
 						make:
 							myStaticProperty += 1
 					}
@@ -10250,9 +10349,10 @@ Caused by:
 					wout[newInstance2.myStaticProperty] ;; prints 4
 				</code></div>
 
-				In the above case, its pointing to an immediate value, so changing it isn't a problem.
-				But if you want to create a static variable initialized to a copy of a variable rather than referencing that variable,
-					like static members in C++, just create a copy first:
+				<div>In the above case, its pointing to an immediate value, so changing it isn't a problem.
+				    But if you want to create a static variable initialized to a copy of a variable rather than referencing that variable,
+					   like static members in C++, just create a copy first:
+                </div>
 				<div><code>
 					var x = 5
 
@@ -10271,31 +10371,52 @@ Caused by:
 
 				</code></div>
 
-				Note that there's no equivalent of a static function varibale.
-				This differs from many languages that allow static function variables.
-				In Lima, you just need to use a variable in a higher scope.
+				<div>Note that there's no equivalent of a static function variable.
+				    This differs from many languages that allow static function variables.
+				    To do this in Lima, you just need to use a variable in a higher scope.
+				</div>
 			</li>
 			
 			<li title="How to re-key an array">
-				If you select a slice of a list or something, the keys are preserved. 
+				If you select a slice of a list or object, the keys are preserved. 
 				In such cases, you might want to rekey the array, so that all its members are elements.
-				<code>
+				<div><code>
 					"hello"[[k>2]]			;; returns the object {3:'l' 4:'o'}
 					"hello"[[k>2]].sort[k]	;; returns the object {0:'l' 2:'o'}, or equivalently "lo"
-				</code>
+				</code></div>
 			</li>
 			
 			<li title="How to do something only between items? Is there a 'join'/'implode' method?">				
-				You can emulate classical string join (implode in php) using the psuedo-method ins and the join method:
+				You can emulate classical string join (implode in php) using the psuedo-method <code>ins</code> and the <code>join</code> method:
+				<div><code>
+					var L2 = {1 2 3 4 5}.ins[[', ']]    ;; this returns the list {1 ', ' 2 ', ' 3 ', ' 4 ', ' 5}
+					wout[L2.join[a.cat[b]]]             ;; this will print the list with commas
+				</code></div>
+			</li>
+			
+			
+			<li title="How to access shadowed variable names using self.">
 				<code>
-					var L2 = {1 2 3 4 5}.ins[[', ']]	;; this returns the list {1 ', ' 2 ', ' 3 ', ' 4 ', ' 5}
-					wout L2.join[a.cat[b]] 		;; this will print the list with commas
+					var x = 5        ;; x1
+					var y = {        ;; y1
+					  x1~>self.x
+					  x = 10         ;; x2
+					  y = fn a:      ;; y2 (naming the parameter ''x instead of 'a' is illegal here)
+					     var y = {   ;; y3
+					     	x2~>self.x
+					        x=10      ;; x3
+					        y=fn b:   ;; y4 (naming the parameter 'x' instead of 'b' is illegal here)
+					           self.x ;; references x3
+					           x1     ;; references x1
+					    	   ;; trying to access 'x' here is illegal
+					     }
+					}
 				</code>
 			</li>
 			
-			<li title="Accessing object memebers shadowed by nested objects">
+			<li title="Accessing object members shadowed by nested objects">
 				The trick is to make a reference to the object itself
-				<code>
+				<div><code>
 				x = 
 				{	mythis ~> this	;; mythis points to this
 					myself ~> self	;; myself points to self
@@ -10320,48 +10441,7 @@ Caused by:
 						]
 					}
 				}
-				</code>
-			</li>
-			
-			
-			<li title="Translators in lima">	
-				<p>In Lima, internationalization is done using the concept of translators.
-					A translator is a function that takes one input - a value, to translate - 
-						and returns a value in another language.
-					The value would be in some standard format, say a string in english or an integer.
-					The translator function itself could be as simple as a map that can only translate specific phrases
-						(similar to localized property files in Java),
-						or can be as complex as a full langauge translator able to translate arbitrary structures.
-					
-					<div class=example><code>
-						dateTranslator.from['en'].to['en'].translate['monday']
-						dateTranslator.from['en'].to['en'].translate['am']
-					
-						var spanishTranslator = translatorFactory.from['en'].to['es']
-						spanishTranslator.translate['one'] ;; would return 'uno'
-					
-						var romanjiTranslator = translatorFactory.from['en'].to['ja' 'romanji']
-						romanjiTranslator.translate['one'] ;; would return 'ichi'
-						
-						var smartTranslator = englishTranslatorFactory.context['businessMumboJumbo']
-						smartTranslator.translate["Let's discuss that later"] ;; might return "Let's table that for now" or "Lets put a pin in that"
-						smartTranslator.translate["What is your request?"]     ;; might return "Whats the ask?"
-					</code></div>
-				</p>
-				<p> They don't have to neccessarily be just for words, 
-						you could use them for time formats or other locale-specific formats for things.
-					<div class=example><code>
-						translator.translate[5] 		             ;; could return "five"
-						translator.translate[{animal="dog" feet=4}]  ;; could return "perro tiene cuatro patas"
-						
-						currencyTranslator.lang['en' 'US'].translate[400345000.045]	;; would return "400,345,000.45"
-						currencyTranslator.lang['en' 'CA'].translate[400345000.045]	;; would return "400,345,000.45"
-						currencyTranslator.lang['no'].translate[400345000.045]	    ;; would return "4.294.967.295,000" 
-						
-						moneyTranslator.lang['en'].currency['eur'].translate[500.34]     ;; would return "�500.34"
-						moneyTranslator.lang['lt'].currency['eur'].translate[500.34]     ;; would return "500,34 �"
-					</code></div>
-				</p>					
+				</code></div>
 			</li>
 			
 			<li title="How to describe a hardware bus in Lima">
@@ -10376,19 +10456,13 @@ Caused by:
 					]
 				}
 				y = 
-				{	private mix x![t] 		;; using all x's members except t
+				{	private mix x:! t  		;; using all x's members except t
 				
-					t = fn 	  ;; override the old t
-					[	ret privateOldt[].cat['y']
-					]
-					oldt = fn
-					[	ret privateOldt[]
-						;;[ of course we could have just inherited x's t member 
-							as a public member and wouldn't have had to
-							write this method ;;]
+					t = fn 	  ;; override t
+					[	ret oldt[].cat['y']
 					]
 
-					private mix x[t : privateOldt] ;; using x's t member aliased as private member oldt
+					private mix x[t : oldt] ;; using x's t member aliased as private member oldt
 				}
 				
 				y.t ;; returns 'xy'
@@ -10400,7 +10474,7 @@ Caused by:
 		      Lima doesn't quite have the same kind of generics that a language like Java has, 
                 because values in Lima don't have a "type" (instead a  given type-set can either include a value or not). 
               However, you can still do most of the things you would want generics for using variables containing types:
-			  <code>
+			  <div><code>
 				var Statistics = fn type T:
                     ret { 
                       list[T] percentiles ;; 0, 20, 40, 60, 80, 100
@@ -10409,7 +10483,26 @@ Caused by:
                     }
                     
                 var x = Statistics[int] ;; returns a statistics object where the type T is 'int'
-			  </code>
+			  </code></div>
+			  
+			  This has the added benefit that things like list-subclasses with a specified element type are compatible with 
+			     the base list with that specified element type, unlike in class-based typing systems like java. For example:
+                 
+			  <div><code>
+				var Sublist = {
+                    mix[list]
+                    
+                    first = fn:
+                        ret alist[0]
+                }
+                
+                var see = fn list[int] alist:
+                    wout[list]
+                
+                Sublist[int] x = {1 2 3}
+                
+                see[x] // is callable even tho the parameter is required to be a 'list[int]'
+			  </code></div>
 			</li>
 			
 			<li title="Creating generators, custom iterators, and coroutine-like semantics in lima">
@@ -10434,7 +10527,7 @@ Caused by:
 						createInfiniteList = fn:
 							var theList = {}
 							var next = 1;
-							while 1:
+							while true:
 								infiniteList.=ins[next]
 								next++
 							ret theList
@@ -10522,7 +10615,27 @@ Caused by:
 					}
 				</code>
 			</li>
-			
+
+			<li title="Understanding operators that return macros">
+		    	Since anything in Lima can potentially return a macro, it may be confusing to think about how operator precendence interacts
+					in exprssions where macros may be returned from one part of the expression.
+				Operator precedences are resolved normally, and when one resolves to a macro the remaining expression is passed to the macro,
+					which may consume only part of that remaining expression.
+				Once the macro resolves, expression resolution continues as normal.
+				An example:
+			  <code>
+				;; Assume that operator precedence is the same as normal arithmetic and
+				;; assume that b*1 resolves to b, and a+b returns a macro
+				a + b*1 + 4*5
+
+				;; will resolve to
+				a + b + 4*5       ;; which resolves to..
+				someMacro + 4*5   ;; which resolves to..
+				  
+				;; if someMacro only consume "+ 4", and returns 40 this will then resolve to:
+				40*5
+			  </code>
+			</li>
 			
 			<li title="Using don't cares in logic">
 				You can use <code>arb</code> to implement don't cares in an if statment:
@@ -10574,7 +10687,7 @@ Caused by:
 				<div><code>
 					bs.book[[ v[{'title' 'author'}.has[k]] ]]			;; one way
 					bs.book[[ {title=v.title  author=v.author} ]]	;; another way
-				</code>
+				</code></div>
 			</li>
 			
 			
@@ -10917,6 +11030,8 @@ Caused by:
 					exit
 				]
 				</code></div>
+
+				You can enforce that this function is used in place of exit by using the <code>exitFn</code> attribute.
 				
 				Also, object desctructors could cover the use cases you would use atexit for.
 				Or possibly you could use a try-finally block for this as well.
@@ -11047,9 +11162,9 @@ Caused by:
 				</p>
 			</li>
 			
-			<li title="Using a custom function to modify code">
-				<p>	A useful use of custom functionality is to modify normal syntax to mean something not-so-normal.
-					For example, a custom function could be defined such that this:
+			<li title="Using a macro to modify code">
+				<p>	A useful use of macro functionality is to modify normal syntax to mean something not-so-normal.
+					For example, a macro could be defined such that this:
 					<div><code>
 						atomicAssignment [
 							a = getFromServer['a']
@@ -11069,12 +11184,12 @@ Caused by:
 						var temp_d = getFromServer['d']
 						var temp_e = getFromServer['e']
 						
-						atomic [
-							a = temp_a
-							b = temp_b
-							c = temp_c
-							d = temp_d
-							e = temp_e
+						atomic
+							statements1: a = temp_a
+							statements2: b = temp_b
+							statements3: c = temp_c
+							statements4: d = temp_d
+							statements5: e = temp_e
 						]
 					</code></div>
 					
@@ -11306,13 +11421,95 @@ Caused by:
                 </p>
 			</li>
 			
-			<li title="Why doesn't Lima have an 'exit' function?">
-			    <p> Lima doesn't have any functions that exit the program because program exit should always be 
-                        under the full control of the top-level module. 
+			<li title="Why does Lima allow overriding of the behavior of the 'exit' function?">
+			    <p> Program exit should always be under the full control of the top-level module.
                     Dependencies of a module shouldn't be allowed to hijack the program by killing it without going through
                         proper error handling channels first.
+					Therefore, the main program is allowed to change the <code>exitFn</code> attribute's bound value so
+						other code won't directly exit the program.
+					This can be used to capture the exit call and handle it appropriately. For example:
+					<div><code>
+						var exitHandler = fn code:
+				        	wout['Exit called within ShraffersExternalModule with code: 'code]
+				    	exitFn.as[exitHandler]:
+							ShraffersExternalModule.dangerousCall[]
+					</code></div>
                 </p>
 			</li>
+
+			<li title="How to implement back-pressure in Lima?">
+			    <p> So since Lima uses lists for a range of things (strings, arrays, streams, generatorss, etc), one question
+						would be whether back-pressure can be implemented in Lima. The answer is yes. All you have to do is have some external
+						condition for halting the output of a list until that external condition changes.
+					Here's an example:
+
+					<div><code>
+						;; example forthcoming - Count the number of bytes that have been sent over the network for a file/stream
+						var input = tcp.connect[adr[128.123.43.0] 'utf8']
+						var output = tcp.connect[adr[128.123.43.1] 'utf8']
+						var paused=false middleMan = {}
+						df connection.in.split[''@] chunk:
+							if
+							 chunk === 'backpressure':
+				             	paused = true
+							 chunk === 'readyForMore':
+								paused = false
+							 else:
+								middleMan.=cat[chunk]
+
+						df middleMan chunk:
+							if paused:
+								var f = future
+								change[paused]:
+									f.return[]
+							f.wait:
+								output.out.=cat[chunk]
+					</code></div>
+                </p>
+			</li>
+
+			<li title="Using modules as singletons or global value stores">
+			    <p> Lima modules declared in the normal way are copies - modifying those copies won't affects anyone else using that module.
+					For example if you have the module:
+					<div><code>
+						var x = 5
+						var getX = fn: ret x
+					</code></div>
+
+					and you use it like this:
+
+					<div><code>
+						private use['xModule']
+						xModule.x = 40
+						getX[]  ;; outputs 40
+					</code></div>
+
+					another module that uses xModule won't see those changes:
+
+					<div><code>
+						private use['xModule']
+						getX[]  ;; outputs 5, not 40
+					</code></div>
+
+					This is different from things like node.js where, because variables are all references, changes would be seen.
+					If you want to see changes across modules, you can do one of two things.
+					You can create a reference to the module using xModule:
+
+					<div><code>
+						private var xModule ~> load['xModule']
+						getX[]  ;; outputs 5, not 40
+					</code></div>
+
+					or you can create a reference within xModule:
+
+					<div><code>
+						var x ~> 5
+						var getX = fn: ret x
+					</code></div>
+                </p>
+			</li>
+
+
 			
 			<li title="Covariance and Contravariance">
 			    <p> Languages like Java disallow certain types of equivalencies with generics.
@@ -12070,6 +12267,38 @@ Caused by:
 					and implicit futures (like <code>c.len</code> which blocks the execution of that thread until it is known).
 				</p>
 			</li>
+				
+			<li title="Default function parameters defined recursively">
+				<code>
+					fn functionName
+					 int[a b]: 
+					      ret a+b
+					 int a: 
+					      ret fn.this[a 1] ;;[ here, if the function is called with only one argument, 
+					                            then b defaults to 1 ;;]
+				</code>
+			</li>
+			
+			<li title="How to strip whitespace (or other things)">
+				<code>
+					;; right stripping spaces and extended spaces
+					var rstrip = fn aString:
+						var str = aString
+						df str v k: 
+						    if v == ' ' $ v.name == 'extendedSpace': 
+						        str.=rm[k] 
+						     else: 
+						        break
+						ret str
+					
+					;; left strip
+					var lstrip = fn aString:
+						ret rstrip[aString.sort[-k]]	;; right strip the reversed string
+				</code>
+				<div>This pattern can be used to strip any type of characters.
+				</div>
+			</li>			
+		
 			
 			<li title="Additional reading">
 				<h5>Encoding issues</h5>
@@ -12133,36 +12362,54 @@ Caused by:
 	<div class="mainBox mainTitle" title="Things to mention somewhere">
 		<code pretty="no">            
 
-			
+		* how will lima decide how to execute an expression that has a macro as the second operand of a binary operator?
+			* eg a^macroB:{macroArgument1}*macroC:{macroArgument2}+d
+			* since macroC needs to be evaluted before we can know whether the * has a higher or lower precedence than ^,
+				if ^ returns a macro, macroC might not ever be evaluted at all
+			* This could be resolved if a constraint was introduced: macros can't mutate outside state (so that it can be evaluted and disgarded)
+
+		* move 'change' back to being a standard macro, and mention that it's implemented using macro[o].history
+
         * update everything that uses channels with *all* the 'chan' functionality like the || operator
-            * still to go: tcp, http			
-			                                                         
-        * make sure you can do things like stream backpressure 
-            * eg: Count the number of bytes that have been sent over the network for a file/stream
-
+            * still to go: tcp, http
+       
+		* Probably add a custom function called override (and overide) that can be used to override members from an inherited
+			object, even without explicitly excluding them when inheriting (the override would be the explicit exclusion)
+			* eg
+				x = { int a=5 }
+				y = { mix[x] override fn! a = fn: ret 10 }
         * Figure out how you might do something like observee.id(someValue).set(...) perhaps some kind of attribute?
-			
-		* How would you do something like bluebird cancellation?			
 
-		* custom needs to be fleshed out with functions that can be used to parse the character strings it gets
-		  * Should custom functions return strings that are re-evaluated in context? Probably
-	    * maybe rename custom to "macro" to be more consistent with like all of programming history?
-			* And rename realCustom to customMacro
-			      					   
-		* remove con.cr and con.bs and add an encoding object for ASCII that has those available 
+		* How would you do something like bluebird cancellation?
+			* I think I might want to add the ability to trigger a throw of an exception at whatever arbitrary part of a thread's continuation
+			* That way, you can throw a cancelation exception from any process (even tho this could be unsafe depending on the case) and catch the exception somewhere in that same thread
+				(or outside of the thread if it reaches the top of the stack).
+			* Atomic blocks would prevent an exception from being triggered while its statements are resolving
+			* Also, you could run a section of code with sideEffectLess (or isolate, or similar), making throwing an exception anywhere completely safe.
+				* Perhaps you can have a low level, unsafe mechanism for general throwing from a thread, and have a function that does this using isolate
+				  which does it completely safely
 
-		* a "with" block that blocks out all but specified variables and creates its own scope, as a way to easily define what's used (and what's not). Eg:
-			var x=1, y=2, z=3
-			var result = with x y:
-			   wout[x] // works fine
-			   wout[z] // doesn't work
-			   return x+y
-                
+		* macro needs to be fleshed out with functions that can be used to parse the character strings it gets
+		  * NIX Should macros return strings that are re-evaluated in context? Probably
+		  * ACTUALLY, macros should require two functions: one that returns an AST, and one that translates that AST into lima.
+			This would give analyzers, optimizers, and other code transformers a canonical representation to work with (that would always be far easier to work with than raw charactesrs)
+		* You should be able to get an AST representation of any lima object, as well as be able to get a string representation
+
+		* remove con.cr and con.bs and add an encoding object for ASCII that has those available
+                 
         * optimize needs to have a way to specify things like "optimize this for the 80% most likely inputs"
 
-   		* replace 'make' with the bracket operator in object descriptions? Wouldn't this complicate things tho? You'd have to then re-override the bracket operator on the instance
-			
+		* partial implementation of make (missing some necessary things - can't remember what at the moment)
+			var make = fn:
+			  var scopeObject ~> callingScope.this
+			  var originalBracketOp = meta[scopeObject].operators['[']
+			  meta[scopeObject].operators['['] = ret fn:
+				var x = scopeObject
+				meta[x].operators['['] = originalBracketOp
+				callback[x]
+				ret x
 
+   		
 		</code>
 	</div>
 	
@@ -12394,8 +12641,8 @@ Caused by:
 			"compare",
 			"override",
 			"parse",
-			"custom",
-			"realCustom",
+			"macro",
+			"customMacro",
 			"this"
 		]
 		var literalWordsB = 

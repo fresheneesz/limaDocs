@@ -22,3 +22,7 @@
 	* It just gets you deeper and deeper into trouble if you combine those namespaces
 
 * The `inherit` meta property was created to facilitate overriding how properties are inherited. Before this property was created, I envisioned a `fixed` custom function that would create a "static member" of an object that would be shared across instances, but when inherited would create a copy. This way you could keep track of class-specific things. This probably isn't that useful usually tho, so I removed it, but added a way to implement it in user-space if need be.
+
+* Being able to throw an exception at an arbitrary point within a running continuation is necessary for doing things like cancelation of functions you haven't written (eg module functions) without them having to explicitly support cancelation. 
+
+* Digits in numbers can be separated by single-quotes like 234'345 so that you can group numbers in a way that makes them more readable, for example grouping digits in threes to indicate orders of 1000, or grouping hexadecimal numbers in twos to indicate bytes or fours to indicate each 2 bytes. Single-quotes are used rather than commas because commas look too much like dots and are used in some langauges to indicate the decimal place. So for visual contrast and minimizing confusion, the single-quote is used for that.

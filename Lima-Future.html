@@ -2288,6 +2288,47 @@
 								
 				</code></div>
 			</li>
+			
+			
+			<li title="Translators in lima">	
+				<p>In Lima, internationalization could be done using the concept of translators.
+					A translator is a function that takes one input - a value, to translate - 
+						and returns a value in another language.
+					The value would be in some standard format, say a string in english or an integer.
+					The translator function itself could be as simple as a map that can only translate specific phrases
+						(similar to localized property files in Java),
+						or can be as complex as a full langauge translator able to translate arbitrary structures.
+					
+					<div><code>
+						dateTranslator.from['en'].to['en'].translate['monday']
+						dateTranslator.from['en'].to['en'].translate['am']
+					
+						var spanishTranslator = translatorFactory.from['en'].to['es']
+						spanishTranslator.translate['one'] ;; would return 'uno'
+					
+						var romanjiTranslator = translatorFactory.from['en'].to['ja' 'romanji']
+						romanjiTranslator.translate['one'] ;; would return 'ichi'
+						
+						var smartTranslator = englishTranslatorFactory.context['businessMumboJumbo']
+						smartTranslator.translate["Let's discuss that later"] ;; might return "Let's table that for now" or "Lets put a pin in that"
+						smartTranslator.translate["What is your request?"]     ;; might return "Whats the ask?"
+					</code></div>
+				</p>
+				<p> They don't have to neccessarily be just for words, 
+						you could use them for time formats or other locale-specific formats for things.
+					<div><code>
+						translator.translate[5] 		             ;; could return "five"
+						translator.translate[{animal="dog" feet=4}]  ;; could return "perro tiene cuatro patas"
+						
+						currencyTranslator.lang['en' 'US'].translate[400345000.045]	;; would return "400,345,000.45"
+						currencyTranslator.lang['en' 'CA'].translate[400345000.045]	;; would return "400,345,000.45"
+						currencyTranslator.lang['no'].translate[400345000.045]	    ;; would return "4.294.967.295,000" 
+						
+						moneyTranslator.lang['en'].currency['eur'].translate[500.34]     ;; would return "�500.34"
+						moneyTranslator.lang['lt'].currency['eur'].translate[500.34]     ;; would return "500,34 �"
+					</code></div>
+				</p>					
+			</li>
 		</ol>
 
 	</div>
@@ -2356,11 +2397,6 @@
 			* zone transfer
 			* DNS dynamic update (?)
 	
-		* Probably add a custom function called override (and overide) that can be used to override members from an inherited
-			object, even without explicitly excluding them when inheriting (the override would be the explicit exclusion)
-			* eg
-				x = { int a=5 }
-				y = { mix[x] override fn! a = fn: ret 10 }
     
     
 

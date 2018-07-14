@@ -206,7 +206,8 @@
 		<p>	Of course why create a new format if there aren't benefits.
 			<ul><li>LiON can represent objects with arbitrary values as keys.</li>
 				<li>The syntax is more compact for objects with string keys.</li>
-				<li>Has a unified syntax for objects and lists</li>
+				<li>Has a unified syntax for objects and lists.</li>
+				<li>Can represent objects where multiple keys point to the same object, including objects with circular references.</li>
 			</ul>
 		</p>
 		
@@ -221,12 +222,12 @@
 			Also note that the "hexadecimal number" in a string represents a LimaEncoding character (usually the same as a unicode codepoint).
 			E.g. <code>""![2B 31]</code> represents the string <code>"+1"</code>.
 		</p>
-		
-		<p> When sending or storing LiON, you can simply store a list or map of values separated by whitespace. 
-            Unlike JSON, you don't need surrounding curly-braces. For example:
-            <code>0 "zero" [] {} zero:"0"</code> represents <code>{0:0 1:"zero" 2:[] 3:{} zero:"0"}</code> 
-            whereas
-            <code>{0 "zero" [] {} zero:"0"}</code> represents <code>{0: {0:0 1:"zero" 2:[] 3:{} zero:"0"} }</code> 
+
+		<p>	The reference representation is a list value prepended with "~" where the list indicates the path from the root of the object to the
+			value being referenced. For example in <code>{a={b=5 c=5} d=~{"a" "c"}}</code>, d points to the value <code>5</code>,
+				and <code>{a={b=5 c=~{"a"}}}</code> represents an object with a circular reference to the object named "a" in the top-level object.
+			Note that <code>~{}</code> points to the top-level object. For example in <code>{a={b=5 c=~{}}}</code>,
+				a.c points to the top-level object, meaning that a.c.a.b would be that 5.
 		</p>
 	</div>
 	
