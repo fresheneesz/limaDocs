@@ -2338,8 +2338,32 @@
 				
 				
 				== FEATURE FREEZE (things to think about, but not to implement in the first version) ==
-		
-			
+
+		An alternative object creation macro that allows property reordering so you can define things in logical groupings
+		without worrying about where their dependencies are defined. This requires an explicity way to figure out which
+		properties each statement is defining (which isn't generally possible in a normal object). Eg every defined property
+		is defined with a bare colon (no macro wrappings or anything):
+			configObject[
+				rightMargin: width-leftMargin+position.x
+				leftMargin: width/10
+
+				position: {x=30 y=40}
+
+			 	width: 50
+				height: 100
+			]
+
+        Maybe allow overriding ~ and ~> if you inherit from a reference: {mix[someRef~]}
+
+        Question: what do you do about attribute name collisions?
+        * Eg. What if a submodule requires a same-named attribute that a supermodule defines
+           Answer: The supermodule should be aware of the submodule's required attributes and shouldn't use that name
+        * Eg. But what if the submodule changes later to require that name?
+          Answer: Perhaps there can be some module upgrading analysis that can warn the programmer about a case like that.
+                  When you build, it could analyze the modules that directly use attributes and complain if a module that wasn't using an attribute starts using it?
+        * Eg. What if an objects methods are given a different attribute value than the object's constructor?
+          Answer: The object should grab a copy of that attribute's value in the constructor
+        * What do you do about running module definitions? Do you have to surround the module loading in an attribute block as well?
 			
         * probability and value duality/multiplicity - maybe call it something like unsurity or .. i like multiplicit value		
 		* how do you describe a probability map that doesn't have full information?
@@ -2365,12 +2389,28 @@
 			     else : 0 .1
 			   }
 			]
+
+		* You should be able to get an AST representation of any lima object, as well as be able to get a string representation
+
+		* maybe remove con.cr and con.bs and add an encoding object for ASCII that has those available
+            * why?
 			  		
 			
 		* Think about how you would be able to put in dependency constraints into a system, something like private/public kinds of things in classes, but at a higher level. 
 			Like saying that a particular module can access some set of other modules, but not others. Strong coupling is a huge problem in programming			
 
-		                   
+
+        * If we remove the restriction that binary operators can't return macros, how will lima decide how to execute an expression
+                that has a macro as the second operand of a binary operator?
+			* eg a^macroB:{macroArgument1}*macroC:{macroArgument2}+d
+			  since macroC needs to be evaluated before we can know whether the * has a higher or lower precedence than ^,
+				if ^ returns a macro, macroC might not ever be evaluated at all
+            * The best answer is to run the macro as an isolate and evaluate the result
+			* Nixed ideas:
+                * This could be resolved if a constraint was introduced: macros can't mutate outside state (so that it can be evaluted and disgarded)
+                * The answer is: if you can't resolve it, ask the programmer
+
+
 		* Maybe stack traces should shorten paths (eg base everything on the main executable path
 			
 		* think about whether to add a function 'guarantee' (maybe with an easier to type name) that allows you to do things like
