@@ -29,3 +29,12 @@
 * Digits in numbers can be separated by single-quotes like 234'345 so that you can group numbers in a way that makes them more readable, for example grouping digits in threes to indicate orders of 1000, or grouping hexadecimal numbers in twos to indicate bytes or fours to indicate each 2 bytes. Single-quotes are used rather than commas because commas look too much like dots and are used in some langauges to indicate the decimal place AND because most other languages use them as list separators so it would be confusing. So for visual contrast and minimizing confusion, the single-quote is used for that.
 
 * while and df *should* create new scopes so people don't get confused when variables would change out from under them in asynchronous callbacks. Read: https://blogs.msdn.microsoft.com/ericlippert/2009/11/12/closing-over-the-loop-variable-considered-harmful/
+
+== :: syntax ==
+
+I wanted to make basic objects really easy to create, but before the :: operator, you had to use string literals with the : operator, which meant you needed to put in extra characters (the quotes) {'a':1}. So there was the idea to require a type for privileged members and requiring no type for non-privileged members. But there's a couple problem with doing this:
+* You can't then type check non-privileged members
+* There isn't a distinguishable difference between setting a new non-privileged member and initializing an inherited privileged member
+
+This :: operator was created to resolve this. Since setting keys with variables is a lesser use-case, whatever annoyance :: causes would be minimal. Then we can go back to = being used for privileged members AND match more closely with javascript semantics.
+

@@ -87,7 +87,7 @@
 		}
 		
 		.example .collapsable_header, .elaboration .collapsable_header  {
-			font-size: 11px;
+			font-size: 12px;
 			color: rgb(150, 80, 80);	
 			font-family: "Comic Sans MS";
 		}
@@ -211,29 +211,24 @@
 		
 		<span id="openAll">Open All Sections</span>  &nbsp;&nbsp;&nbsp;  <span id="closeAll">Close All Sections</span>
 	
-	<div class="mainBox mainTitle" title="Introduction">
+	<div class="mainBox mainTitle" sectionTitle="Introduction">
 		<p> Lima (pronounced like "lima bean") is a high-level optionally-typed platform-independent language.
-		    It allows seamless language extension via parsers, and automatic optimizations via optimizer modules.
+		    It allows seamless language extension via fully arbitrary macros, and has the ability to specify expected input
+				behavior and intended performance behavior of your program in addition to intended output behavior.
+			Automatic optimization modules
+			The implementation can be found <a href="https://github.com/fresheneesz/lima">on github</a>.
         </p>
 		<p>	Lima is made to be easy (and terse) to write.
-            Like separating the concerns of style from structure with HTML and CSS allows much easier redesign of pages,
-            Lima allows separating the concerns of optimization from program operation, allowing much easier optimizations to be built and reused.
-			Optimizations are intended to be handled by the compiler (and third party optimizer plugins) 
-				- a Lima program should never have to be hand-optimized.
-			Input behavior (probability of certain types of inputs) can be specified so that the optimizers can
-				take all things into consideration.
-			All you should need to do is specify the behavior of your program. 
-			Lima is designed to give you that freedom.
 		</p>
-		<p>	Lima is intended to be zero-configuration. 
+		<p>	Lima is intended to be zero-configuration.
 			Make files or their like aren't needed to compile a single project.
 			Settings that require compiler flags or similar in other languages would be included in the source files themselves
-				- so that there is only one source of truth (no pun intended).
+				- so that there is only one source of truth.
 		</p>
 		
 		<p>	Without further ado, some code examples:
 			<br>
-			<div class=codeBox><code>
+			<div class=codeBox>
 			
 			target[x86.win32  ppc.mac  jvm]     ; Cross compiles - the 'target' declares target platforms and formats to compile to
 			
@@ -283,51 +278,112 @@
 				        wout[runner@]
 				
 				; Destructuring assignments (x gets cat.legs - the value 4, myvariable gets cat.bam[1] - the value 2)
-				{legs=x bam={1:myVariable}} = cat 
+				{legs:x bam:{1:myVariable}} = cat
 
 
-			</code></div>
+			</div>
 		</p>
 		
 		<p>	Lima has a few defining attributes:
-			<ul><li><h5>Declarative programming</h5>
-					Most languages can be described as imperative programming, where programmers tell the computer not only what to do, 
-						but how to do it.
-					This places a large burden on the programmer to optimize their code. 
-					Lima aims to separate optimization from program description through a compiler extendable with 3rd party optimization packages.
-					While the syntax of Lima is decidedly imperative-like, in Lima you leave the specifics of 'how' to the compiler, 
-						allowing vastly simpler code in many cases.
-					You may write one imperative implementation of an algorithm in Lima, but in compilation is transformed into a very different 
-						algorithm if it would make the program run faster.
-				
-					<p>	Note that I'm using a definition of <i>declarative programming</i> that doesn't require
-						full <a href="http://en.wikipedia.org/wiki/Referential_transparency_(computer_science)">referential transparency</a>.
+			<ul><li><h5>Separates behavioral logic from optimization logic</h5>
+				    <p> In traditional imperative programming languages, programmers tell the computer not only what to do,
+							but how to do it.
+						This places a large burden on the programmer to optimize their code.
+		                In Lima, optimizations are intended to be handled entirely by the compiler and third party
+							optimizer plugins - a Lima program should never have to be hand-optimized.
 					</p>
-				</li>    
-				<li><h5>Concurrent-by-default</h5>
-					Since concurrency is usually an optimization, concurrency is implicit in Lima. 
-					Haskell-like lazy evaulation and infinite lists can make Lima far easier to work with than a conventional language.
-					<span class="copiedNote inputOrder" style="color:black;">
-						Separate inputs to the program (separate files, different network requests, etc) 
-							are treated as order-doesn't-matter by default, 
-							meaning that, for example, multiple files will be opened and read out-of-program-order 
-							if that is more efficient in some way (speed or memory).
-					</span>
+					<p> While lima is an imperative-style programming language, you should be able to treat it more like a
+							declarative programming language, where your program defines the input and output behavior (as well as
+							performance characteristics) and the optimizer will decide how to actually implement your program.
+					</p>
+					<p> In Lima you leave the specifics of 'how' to the compiler, allowing vastly simpler code in many cases.
+						You may write one imperative implementation of an algorithm in Lima that the compiler transforms
+							into a very different algorithm if it would make the program run faster.
+					</p>
+
+					<div class="elaboration">
+						<p>	Modern languages fall into two general categories:
+							<ul><li>Higher performance languages - languages made to write fast programs</li>
+								<li>High-level languages - languages made for quickly writing programs</li>
+							</ul>
+						</p>
+						<p>	Domain-specific languages are sometimes made to bridge this gap, but it comes at the sacrifice of
+								flexibility and generality.
+							Lima is a language that bridges this gap without making sacrifices.
+							It can do this by completely severing the tie between the code describing your program and the code
+								describing how to make your program run fast.
+							Code written in languages today have descriptions and optimizations that are hopelessly coupled.
+						</p>
+						<p> Like separating the concerns of style from structure with HTML and CSS allows much easier redesign
+								of pages, Lima allows separating the concerns of optimization from program operation, allowing
+								much easier optimizations to be built and reused.
+						</p>
+						<p>	In Lima, these concerns are decoupled by:
+							<ul><li>having the ability to fully describe expected input behavior (including probabilities about
+									that input) of a program and desired performance trade-offs, and
+								</li>
+								<li>the ability to write optimization extensions that can be used by a Lima compiler.</li>
+							</ul>
+						</p>
+						<p> The compiler would then use optimizations to automatically optimize the resulting program in ways
+								that optimizers for languages without the ability to annotate input and desired performance
+								trade-offs simply can't do.
+						</p>
+						<p>	And since Lima provides few avenues for the programmer to hand-optimize their code, programmers
+								are forced to write properly modular optimization extensions that can be reused by anybody.
+							This philosophy allows Lima to be maximally expressive, since the language doesn't need to provide
+								mechanisms for the programmer to hand-optimize code.
+							Deciding whether to used a LinkedList vs ArrayList, Quick Sort vs Merge Sort, recursion vs iteration,
+								memoization, caching - can all be left to optimization plugins, at worst, ones you write yourself.
+						</p>
+					</div>
+				</li>
+				<li><h5>Optional types</h5>
+					Variables can either have the catch-all type <code>var</code> (or the <code>var?</code> type if you
+						want your variable to be able to contain nothing) or can have a more constraining type.
+					Static analysis can still catch type mismatches for anything you explicitly type and can allow you
+						to completely avoid nil values if you want to (by never using the <code>var?</code> type).
 				</li>
 				<li><h5>Dependent types (Value-based types)</h5>
-					Values don't have types - rather types define a set of valid values. 
+					Values don't have constrained types - rather types define a set of valid values.
 					For example <code>3</code> doesn't have the <code>int</code> type,
 						rather <code>int</code> is a type which includes the value <code>3</code>.
-					Taking the ideas of duck-typing and prototype-based programming to the extreme, 
-						types are simply used to constrain the values that variables can take on.
+					While the type-checker can still ensure that the explicit (non-<code>var</code>) types of your
+						variables match the types required by the operations performed on those variables,
+						types don't have to be in a strict subclass-superclass relationship like in languages like java.
 					This releases the programmer from ridged typing systems that can make code brittle and hard to maintain or extend.
+					Lima allows <a href="https://en.wikipedia.org/wiki/Variant_type">variant types</a> like the ones found
+						in functional languages like OCaml, Haskell, and
+						<a href="https://guide.elm-lang.org/types/custom_types.html">Elm</a>.
 				</li>
-				<li><h5>Performance-based logic</h5>
-					Lima has the ability to not only write and use optimizer modules that make your programs run faster, 
-                        but also has the ability to change the behavior of your program based on the abilities of the environment or 
-                        individual machine your program is running on.
-                    The basic function used to do this is <code>arb</code>, which allows the compiler to choose a value (from a list)
-                        that will give your program the best performance.
+				<li><h5>Operator-based semantics</h5>
+					<p>	Lima's three primary constructs are the object, the operator, and the macro.
+						Every value in lima is an object that is either a macro, or has operators, or both!
+						A function in lima is simply an object with a bracket operator.
+						A number in lima is simply an object with operators for operating on numbers.
+						The <code>if</code> and <code>while</code> statements are simply macro objects that parse and execute the code following that object.
+						Types like <code>int</code> and modifiers like <code>private</code> and <code>const</code> are simply macro
+							objects that declare variables in scope and give them type information.
+						Modules themselves are also regular objects that have operators and can be macros.
+						Almost all constructs can be recreated by the programmer or passed around as first-class values.
+					</p>
+					<p>	This give the programmer incredible power to build constructs that blend seamlessly with the core language,
+							but it also forces the language to be self-consistent - the syntax of Lima's language features aren't special cases.
+					</p>
+				</li>
+				<li><h5>Functional emphasis</h5>
+					Lima's core and standard libraries contain very few functions or methods that mutate their arguments
+						or object.
+					This encourages functional programming while still allowing imperative-style where that is more
+						expressive.
+				</li>
+				<li><h5>Prototype-based inheritance</h5>
+					Like Javascript, Smalltalk, and Lua, Lima doesn't distinguish between classes and objects. Any object can
+						inherit from any other object - using that inherited object as its <i>prototype</i>.
+					However, normal inheritance (using <code>mix</code> in Lima is a little more constrained than in
+						javascript, where an object's prototype can change its methods on the fly. In Lima, once an object has
+						inherited from its parent, changing the parent won't change the behavior of the inheriting object -
+						tho there are ways of doing that if that's really what you want (eg operator fallback delegation).
 				</li>
 				<li><h5>Call-by-reference, Assign-by-value</h5>
 					Most major object-oriented languages call-by-value (aka pass-by-value) and assign-by-value for primitives,
@@ -343,15 +399,33 @@
 					   special virtual machines.
 				    Lima doesn't have its own virtual machine or platform, but instead can compile to any platform it supports. 
 				    This frees development of Lima from development of a runtime. 
-                    Good runtimes are already available and the purpose of Lima is to make a better programing language, not a faster runtime environment.
-				</li>   
+                    Good runtimes are already available and the purpose of Lima is to make a better programing language,
+						not a faster runtime environment.
+				</li>
+				<li><h5>Concurrent-by-default</h5>
+					Since concurrency is usually an optimization, concurrency is implicit in Lima.
+					Haskell-like lazy evaluation and infinite lists can make Lima far easier to work with than a conventional language.
+					<span class="copiedNote inputOrder" style="color:black;">
+						Separate inputs to the program (separate files, different network requests, etc)
+							are treated as order-doesn't-matter by default,
+							meaning that, for example, multiple files will be opened and read out-of-program-order
+							if that is more efficient in some way (speed or memory).
+					</span>
+				</li>
+				<li><h5>Performance-based logic</h5>
+					Lima has the ability to not only write and use optimizer modules that make your programs run faster,
+                        but also has the ability to change the behavior of your program based on the abilities of the environment or
+                        individual machine your program is running on.
+                    One way to do this is <code>arb</code>, which allows the compiler to choose a value (from a list)
+                        that will give your program the best performance.
+				</li>
 			</ul>
 			
 			And also a couple interesting features:
 			<ul><li><h5>Language Oriented Programming</h5>
 					Lima has the ability to define powerful macros that are called with user-defined syntax.
-                    This goes beyond ruby dsls and even lisp, which are essentially just lists of tokens, and into the realm of
-						real, arbitrarily structured language parsing.
+                    This goes beyond ruby DSLs and even lisp DSLs (which are essentially just lists of tokens), and into the realm of
+						real, arbitrarily structured language execution.
 					Lima macros can be a powerful way to extend the language and build domain-specific languages for
 						use inside larger programs.
 				</li>
@@ -362,7 +436,7 @@
 				</li>
                 <li><h5>Unified Macro language</h5>
 					Lima unifies compile-time and run-time languages, the former often referred to as a "macro language".
-                    In Lima, Lima itself is its own macro and meta-programming language, and you can allow certain parts of the  
+                    In Lima, Lima itself is its own macro language and meta-programming language, and you can allow certain parts of the
 						program to run at compile-time if possible even for external inputs (using the <code>ready</code> attribute).
 				</li>
 				<li><h5>Transparent references</h5>
@@ -377,58 +451,28 @@
 							(autoboxing is incompatible with the ideas of pass-by-reference and typeless values).
 					</span>
 				</li>
+                <li><h5>Numerical accuracy declarations</h5>
+					Lima allows defining the required numerical accuracy at the point of output of a number (eg printing to
+						the console, writing to a file, or sending on the network).
+					This relieves the programmer from having to manually manage the potential numerical error that accumulates
+						on every operation when doing things like floating point operations, or other lossy arithmetic.
+				</li>
 				<li>And some others: destructuring assignments, object slicing, mapping and comprehension syntax, 
 					nesting comments, <span class=splat>splats</span>, chaining comparisons, generalized operator overloading,
 					time slicing, and more.
 				</li>
 			</ul>
-		</p>		
-		
-		<p>	Lima is also designed so that every construct in the language can be described by the programmer. 
-			Not only are functions first-class, but so are flow-control constructs like <code>if</code> and <code>while</code>,
-				and attribute constructs like <code>private</code> and <code>const</code>,
-				and modules themselves (since modules represent objects).
-			This give the programmer incredible power to build constructs that blend seamlessly with the core language, 
-				but it also forces the language to be self-consistent - the syntax of Lima's language features aren't special cases.
-			
-			<div class="elaboration">
-				<p>	Modern languages fall into two general categories: 
-					<ul><li>Higher performance languages - languages made to write fast programs</li>
-						<li>High-level languages - languages made for quickly writing programs</li>
-					</ul>
-				</p>
-				<p>	Domain-specific languages are sometimes made to bridge this gap, but it comes at the sacrifice of 
-						flexibility and generality. 
-					Lima is a language that bridges this gap without making sacrifices. 
-					It can do this by completely severing the tie between the code describing your program and the code 
-						describing how to make your program run fast. 
-					Code written in languages today have descriptions and optimizations that are hoplessly coupled. 
-				</p>
-				
-				<p>	In Lima, these concerns are decoupled by:
-					<ul><li>having the ability to fully describe expected input behavior of a program and,</li> 
-						<li>the ability to write optimization extensions that can be used by a Lima compiler.</li>
-					</ul> 
-				</p>
-				<p>	Not only are optimization extensions available, but since Lima provides few avenues for the programer 
-						to hand-optimize their code, programmers are forced to write properly moduler optimization 
-						extensions that can be reused by anybody.
-					This philosophy allows Lima to be maximally expressive, 
-						since the language doesn't need to provide mechanisms for the programmer to hand-optimize code. 
-					Deciding whether to used a LinkedList vs ArrayList, Quick Sort vs Merge Sort, recursion vs iteration, 
-						memoization, caching - can all be left to optimization plugins, at worst, ones you write yourself. 
-				</p>
-			</div>
 		</p>
 	</div>
 	
 	
-	<div class="mainBox mainTitle" title="Basics">
+	<div class="mainBox mainTitle" sectionTitle="Basics">
 		
-		<div class="subBox1" title="Variables">
+		<div class="subBox1" sectionTitle="Variables">
 		
 			<p>	In a given lima source file, which from now on I'll call a <span class="module"></span>, 
-					you can define and initialize variables in a <span class=definitionBlock></span> (similar to the "global" scope). 
+					you can define and initialize variables in a <span class=definitionBlock></span> (similar to the
+					top level in a C or java source file).
 				
 				Variable declarations include function definitions and object initializations. 
 				You can declare a variable anywhere you could use a variable, including in functions 
@@ -438,18 +482,18 @@
 				Variables that are defined in the <span class=definitionBlock></span>, 
 					have the implied type <em>var</em> if none is specified
 					(which is a type which includes all values except <code>nil</code> - similar to javascript's "var" and Java's "Object" type).
-				The order of variable initializations doesn't matter in the <span class=definitionBlock></span>,
-					but there can obviously be no circular definitions.
+				Statements in the <span class=definitionBlock></span> are executed in the order they're defined,
+					except for statements hoisted with <code>const</code> (more about that in the section on const under Core Macros).
 			</p>
 			<p>Variable names can contain the characters a through z, A through Z, 0 through 9, and _ (underscore). 
 				They can't start with a number.
-                Also, <code>_</code> is a reserved variable name that can't be declared.
+                Also, <code>_</code> is a reserved variable name that can't be declared (tho "_" can be used as an object property key).
 			</p>
 			<p>	Inside the <span class=definitionBlock></span>, every line must be a variable/member definition (or if statement).
 			</p>
 			<p>	Note that an uninitialized variables may not be used until they've been set. 
-				Also, while module variables (variables defined in the <span class=definitionBlock></span> of a module
-					are similar to global variables, they are not really global since they exist only in the module's scope.
+				Variables declared in a module (in the <span class=definitionBlock></span> of a module)
+					exist only in the module's scope, like in javascript and java.
 				This is explained further in the section on objects.
 			</p>
 	
@@ -459,28 +503,31 @@
 				anotherVariable = 8 	; This would throw an error because it is an implicit variable declaration of a variables that is already declared.
 			</code></div>
 	
-			<p>	Also, variables declared in methods must be case-insensitive-unique in its scope, 
-					which means that no method variable can have the same case-insenstive name in the same scope. 
+			<p>	Variables declared in methods must be case-insensitive-unique in its scope,
+					which means that no method variable can have the same case-insensitive name in the same scope.
+				The only exception to this is that two different variables can differ in the case of their first character only
+					(eg. DuckAssassin and duckAssassin can coexist, but duckassassin can't coexist with either of them).
 				<div class=example><code>
-				var y=5
-				var y=6	; errors because y can't be declared twice in the same scope
-				var Y=7 ; errors because Y is the same case-insensitive variable name as y
+				var ay=5
+				var ay=6 ; errors because ay can't be declared twice in the same scope
+				var aY=7 ; errors because aY is the same case-insensitive variable name as ay
+				var Ay=8 ; is ok because the first character's case is different than ay
 	
 				var x = 
-				{	var y	; is legal, but this y must be accessed with either <span class=this></span> or <span class=self></span>, and the original y cannot be accessed at all within this object
-					var x	; is also legal, but has the same restrictions as y
+				{	var ay	; is legal, but this y must be accessed with either <span class=this></span> or <span class=self></span>, and the original y cannot be accessed at all within this object
+					var x   ; is leval, but has the same restrictions as y (since there is an x in the upper scope)
 					var[a=b=c=90]   ; three variables declared and set to 90
 					var[d=1         ; two variables declared over multiple lines
 						e=2
 					] 		
 					
-					var: f g     ; two variables using colon syntax
+					var: f g     ; two variables using the var type's colon syntax
 					var: h=1     ; three variables using colon syntax on separate lines (with indendation)
-						  i=45
-						  j='something else'
+						 i=45
+						 j='something else'
 						 
 					var z = fn:
-						var x	; errors because x is already declared (actually in two places: the name of the object holding this function and there is a member with that name as well)
+					var x	; errors because x is already declared (actually in two places: the name of the object holding this function and there is a member with that name as well)
 					
 					fn! f = fn int[x y]:	; errors because both x and y have already been declared above
 						ret x+y
@@ -489,7 +536,7 @@
 			</p>
 		</div>
 		
-		<div class="subBox1" title="Program Entry-points">
+		<div class="subBox1" sectionTitle="Program Entry-points">
 		
 			<p>	Most of the time, the <a href="http://en.wikipedia.org/wiki/Entry_point">entry point</a> to the program will be a function called 'main' 
 					(following the convention of C for operating systems that use a single entry-point).
@@ -509,7 +556,7 @@
 			</p>
 		</div>
 		
-		<div class="subBox1" title="Comments">
+		<div class="subBox1" sectionTitle="Comments">
 			
 			As you've probably already seen, comments in lima begin with a single semi-colon: <code>;</code>.
 			This means that programmers used to using semi-colons to end their statements won't (usually) get tripped up
@@ -541,45 +588,45 @@
 			</table>
 		</div>
 	
-		<div class="subBox1" title="Flow Control">
+		<div class="subBox1" sectionTitle="Flow Control">
 			<p>	Flow control in lima is relatively similar to other major languages.  
 				You have an if construct:
-				<div class=codeBox><code>
+				<div class=codeBox>
 					if something == 5:
 						; do something
-				</code></div>
+				</div>
 			</p>
 			<p>	a for-each style loop construct:			
-				<div class=codeBox><code>
+				<div class=codeBox>
 					df aList oneValue:
 						; do something with each value
-				</code></div>
+				</div>
 			</p>
 			<p>	a while-style loop construct:			
-				<div class=codeBox><code>
+				<div class=codeBox>
 					int x = 0
 					while x < 5:
 						; do something until x is greater than 4
-				</code></div>
+				</div>
 			</p>
 			<p>	
 				and exception throwing and catching:			
-				<div class=codeBox><code>
+				<div class=codeBox>
 					try:
 						; do stuff
 						throw "Oops, a problem"
 					 e:
 						; catch and handle exception
-				</code></div>
+				</div>
 			</p>
 			<p>	There are also some more interesting flow control options, like lightweight thread syntax and event handling:
-				<div class=codeBox><code>
+				<div class=codeBox>
 					var done = false
 					var file = thread: ret downloadLargeFile['someFileName.wtvz' 'utf-8']	; runs this asynchronously
 									
 					file.wait:
 						wout["It's finally done!"]
-				</code></div>
+				</div>
 			</p>
 			<p>	The loop constructs have scoping rules like in C - variables created inside a df statement, 
 					for example, will only exist within the loop block.  
@@ -591,7 +638,7 @@
 		</div>
 		
 		
-		<div class="subBox1" title="Blocks">
+		<div class="subBox1" sectionTitle="Blocks">
 			<p>	All of the flow control constructs can either be written using square-brackets as block delimiters:		
 				<div class=codeBox><code>
 					if[
@@ -680,37 +727,45 @@
 		</div>
 	</div>
 	
-	<div class="mainBox mainTitle" title="Operators">	
+	<div class="mainBox mainTitle" sectionTitle="Operators">
 			
 		<p>	Operators are the basic form of interaction with values.
 			An operator can be made of any combination of the symbols: 
-				<ul class=inlineList>
-					<li> ~ </li>
-					<li> @ </li>
-					<li> # </li>
-					<li> $ </li>
-					<li> % </li>
-					<li> ^ </li>
-					<li> & </li>
-					<li> * </li>
-					<li> - </li>
-					<li> = </li>
-					<li> + </li>
-					<li> | </li>	
-					<li> \ </li>
-					<li> / </li>
-					<li> &lt; </li>
-					<li> &gt; </li>
-					<li> . </li>	
-					<li> , </li>
-					<li> ? </li>
-					<li> ! </li>
-				</ul>
-	
-			or can be made with brackets (this is described in the section on operator overloading).
+			<ul class=inlineList>
+				<li> @ </li>
+				<li> # </li>
+				<li> $ </li>
+				<li> % </li>
+				<li> ^ </li>
+				<li> & </li>
+				<li> * </li>
+				<li> - </li>
+				<li> = </li>
+				<li> : </li>
+				<li> + </li>
+				<li> | </li>
+				<li> \ </li>
+				<li> / </li>
+				<li> &lt; </li>
+				<li> &gt; </li>
+				<li> . </li>
+				<li> , </li>
+				<li> ? </li>
+				<li> ! </li>
+			</ul>
 			
-			Operators appearing next to eachother must have whitespace between them.
-			Note that <code>#</code> is a special case - this is explained in the section on strings.
+			An operators consisting of these symbols must have whitespace between them to be
+			treated as separate operators.
+
+			Note that <code>#</code> is Used with string literals (see the section on strings).
+
+			While <code>~</code> and brackets can't be used to create a custom operator, the following are built in operators using
+				those characters:
+			<ul><li> [ ] (and any variation of [[ ]] or [[[ ]]] etc</li>
+				<li> [= ] (and any variation of [[= ]] or [[[= ]]] etc</li>
+				<li> ~ (and any variation of ~~ or ~~~ etc)</li>
+				<li> ~> (and any variation of ~~> or ~~~> etc)</li>
+			</ul>
 		</p>
 		
 		<h4>Binary Operators</h4>
@@ -720,14 +775,14 @@
 			<div class=elaboration>
 				This is primarily so that there is a clear syntactic difference between binary and unary operators,
 					so that the compiler can tell where a statement ends and the next one begins.
-				<div><code>
+				<div class="codeBox">
 					2*5      ; fine
 					2 *5     ; throws exception
 					2* 5     ; throws exception
 					2 *   5  ; fine
 					2 *      ; ..
 					5        ; fine
-				</code></div>
+				</div>
 			</div>
 		</p>
 		
@@ -771,45 +826,50 @@
 				(of both the lvalue and corresponding members of the rvalue).
 			<div class=example><code>
 				var[a b c]
-				{{a b} 'den':{cargo=c}} = {'hi' 'den':{cargo=65}} ; same as a='h' b='i' c=65
-				{cat=a dog=b} = {"cat":50 "dog":190} ; same as a=50 b=190
+
+				{a b c} = {1 2 3}             ; same as a=1 b=2 c=3
+				{x:a y:b z:c} = {x:4 y:5 z:6} ; same as a=4 b=5 c=6
+				{j=a k=b m=c} = {x=7 y=8 z=9} ; same as a=7 b=8 c=9
+				{{a b} c} = {'hi' 'there'}    ; same as a='h' b='i' c='there'
+
+				; not all rvalues need to be consumed
+				{x:{y:{z:a}} = {w:4 x:{y:{z:3}}}  ; same as a=3
+
 				{a b c} += {1 2 3}	; same as a+=1 b+=2 c+=3
-				
 				{var[r1 r2}} ~> {'a' 'b'}	; points r1 at 'a' and r2 at 'b'
 			</code></div>
 		</p>
-		<p> Note that all the values in the rvalue are evaluated before executing the assignments, 
-				and therefore it can be used for inline swapping. 
+		<p> Note that all the values in the rvalue are evaluated before executing the assignments, and therefore it can
+				be used for inline swapping, even in cases where the values being swapped aren't simple values, like accessors.
 			<div class=example>
-				<div><code>
+				<div class="codeBox">
 				var[a='hi' b='lo']
 				{a b} = {b a}
 				wout[a b] 	; prints 'lohi'
-				</code></div>
+				</div>
 				
 				<br>
 				Which has the same affect as:				
-				<div><code>
+				<div class="codeBox">
 				var[a='hi' b='lo']
-				atomic
-					a: a=b
-					b: b=a
-				wout[a b] 	; prints 'lohi'
-				</code></div>
+				var temp = a
+				a = b
+				b = temp
+				</div>
 			</div>
 
 		</p>
-		<p>	Destructuring assignments work with any assignement operator and the reference pointing operator (~>), 
-				but work with no other operator.
+		<p>	Destructuring assignments work with <code>=</code>, any compound assignment operator, and the reference pointing
+				operator (~>), but work with no other operator.
 			This feature is taken from Coffeescript and is a generalization of <i>sequence unpacking</i> in Python.
 		</p>
 			
-		<div class="subBox1" title="Order of Operations">
+		<div class="subBox1" sectionTitle="Order of Operations">
 			These are the order of operations for all binary operators defined by Lima's core language.
 			Dereference Operators, Parens, and Unary operators do not have arbitrary order of operations like binary operators.
 			They always have their listed order of 0 (for dereference and parens) or 1 (for unary operators).
 			
-			<center>(everything is evaluated from left to right except Assignment operators and the ^ operator)</center>
+			<center>(everything is evaluated from left to right except assignment operators and the ^ operator)</center>
 			<table class="normalTable">
 				<tr><td>Order&nbsp;0</td>
 					<td style="">Evaluated First</td>
@@ -859,7 +919,7 @@
 				<tr><td>9</td>
 					<td>Evaluated Last</td>
 					<td>Assignment (evaluated from right-to-left) and the <span class=nilCoalescer>nil-coalescense operator</span> (evaluated from left-to-right)</td>
-					<td>= -= += *= ^= /= %= ~> //= | </td>
+					<td>= -= += *= ^= /= %= ~> //= | : ::</td>
 				</tr>
 			</table>
 
@@ -919,7 +979,7 @@
 			<!--</ol>-->
 
 			Example:
-			<div><code>
+			<div class="codeBox">
 				var a={x:1} b={x:2}
 				-a.x + -b.x*4 + 5*6 ; will resolve to..
 				-1 + -b.x*4 + 5*6 ; will resolve to..
@@ -929,11 +989,11 @@
 				(-9) + 5*6     		; will resolve to..
 				(-9) + 30          	; will resolve to..
 				21
-			</code></div>
+			</div>
 
 		</div>
 		
-		<div class="subBox1" title="Operators - Index">
+		<div class="subBox1" sectionTitle="Operators - Index">
 			<p>	The following operators are here to give a general overview of the operators defined in the core language,
 					but the operators are defined in full detail by the objects that they're members of.
 			</p>
@@ -1090,7 +1150,7 @@
 			<h4>Unary Postfix Operators</h4>
 			<table class="definitionTable">
 				<tr><td> ... </td>
-					<td><p>	Splat operator.
+					<td><p>	Splat operator (aka the spread operator in Javascript).
 						</p>
 					</td>
 				</tr>
@@ -1129,7 +1189,7 @@
 			
 		</div>
 		
-		<div class="subBox1" title="Overloading and Defining New Operators">
+		<div class="subBox1" sectionTitle="Overloading and Defining New Operators">
 			<table class="definitionTable">
 			
 				<tr><td class=nearTop>
@@ -1203,12 +1263,23 @@
 						</p>
 						
 						<p>The following operators can't be overloaded: 
-							<ul class=inlineList>
-								<li> ~ </li>
+							<ul><li> : </li>
+								<li> :: </li>
 								<li> ?? </li>
 								<li> | </li>
-								<li> [= ] </li>
+								<li> Any operator ending in = other than basic assignment <code>=</code> (eg += or !=) </li>
+								<li> [= ] (and any variation of [[= ]] or [[[= ]]] etc</li>
+								<li> ~ (and all variations of ~~, ~~~, etc)</li>
 								<li> ~> (and all variations of ~~>, ~~~>, etc)</li>
+							</ul>
+
+							The following operators can be overloaded but must be binary and have special handling:
+							<ul><li> = </li>
+								<li> . </li>
+							</ul>
+
+							The following operator can be overloaded but must be a postfix operator and have special handling:
+							<ul><li> ... </li>
 							</ul>
 
                             Also note that only the bracket operators and the dot operator can return macros.
@@ -1330,17 +1401,32 @@
 								someObject.int		; prints "name: int, value: int"
 							</code></div>	
 						</p>
-						
+
+						<h4>Overloading the splat operators</h4>
+						<p>	A function used to overload the splat operator should return an object who's iterlist will
+							be used to splay out values.
+							<div class=example><code>
+								var someObject = {
+									1 2
+									operator[ ... ] = fn:
+										ret this.iterlist.ins[3]
+								}
+
+								{someObject...} 	 ; returns {1 2 3} rather than {1 2}
+								df someObject v:
+									wout[v]          ; outputs 1 and then 2 since someObject's iterlist is still default
+							</code></div>
+						</p>
 						
 						<h4>Overloading the bracket operators</h4>
 						<p>	Bracket operators are special in that they aren't quite binary and can't chain or have an alternate order,
                                 but they aren't quite unary, and they can be used like a function call or like a macro.
-							A bracket operator can either be defined as a single-bracket operator (<code>[</code>) or double-bracket operator (<code>[[</code>).
+							A bracket operator can either be defined with any number of single-bracket operators (<code>[</code>).
 							The function it is set to can take any number of arguments.
 							<div class=example><code>
 								var someObject = {
-									operator[ [[ ] = fn key: 
-										ret key+5              ; double bracket operator
+									operator[ [[[ ] = fn key:  ; triple bracket operator
+										ret key+5
 									operator[ [ ] = fn         ; bracket operator using multiple dispatch
 									 key:   ret key+5   
 									 a b c: ret a+b+c
@@ -1409,7 +1495,7 @@
 		
 	</div>
 	
-	<div class="mainBox mainTitle" title="Functions and Macros">
+	<div class="mainBox mainTitle" sectionTitle="Functions and Macros">
 		<table class="definitionTable">
 			<tr><td class=nearTop><span class=fn></span></td>
 				<td>The function creation construct.
@@ -1462,7 +1548,7 @@
 									If variables in <span class=parameters></span> are initialized, 
 										it means that it has a default value that can be overridden if an argument is passed in for that parameter.
 									Default parameters don't have to appear at the end of the parameter list.
-									The only constraint is that all parameters with defaults be consecutive (all in a line),
+									The only constraint is that all parameters with defaults be consecutive (all one after another),
 										and if a splat is used, it comes after all the default parameters.
 									Note that, like parameter types, default values are evaluated on every function execution 
 										(unless <code>final</code> is used, of course).
@@ -1538,7 +1624,7 @@
 										; for example in the case B[3 0] was called
 										fn! B = fn 
 											int[x] int[y]:  ret x+y
-											frac[x] bool[y]: ret x.str.cat[y]
+											real[x] bool[y]: ret x.str.cat[y]
 									</code></div>
 									
 								</p>
@@ -1787,27 +1873,31 @@
 									(not specifying parameters or return values).
 							</td>
 						</tr>
-						
-						<tr><td><span class=dotOperator></span></td>	
-							<td><span class=pseudoMember></span> that returns a type that can only take on a function that returns values 
-									the type given after the dot can take on. 
-								<div class=example><code>
-									fn.int x = fn x: ret x+5
-								</code></div>
-								It also has a bracket operator defined for it:
-								<table class="definitionTable innerBorder">
-									<tr><td><span class=bracketOperator></span></td>	
-										<td>Returns a type that matches a function who's arguments-list is constrained to the type passed in.
-											The return value constraints that its calling type-object imposes still applies. 
-											<div class=example><code>
-												fn.int[ cond[v.length==2] $ cond[v.has['a']&v.has['b']] ] x = fn string a  int b:
-													ret a.cat[b.english]
-											</code></div>
-										</td>
-									</tr>
-								</table> 
+
+						<tr><td>
+								[[returnType]]
+
+								[[:ParamType1A 2A EtcA, T1B T2B, EtcB]]
+
+								[[returnType: ParamType1A ...]]
 							</td>
-						</tr>													
+							<td>Returns a type that matches a function who's arguments-list (and optionally, return value) is constrained to the types passed in.
+								Can specify a return type, a set of parameter-type dispatch lists without specifying parameter names, or both.
+
+								<div class=example><code>
+									fn[[]]       	 ; same as fn!
+									fn[[nil!]] f 	 ; a function that returns nil and takes any number of arguments
+									fn[[int]]    	 ; a function that returns an int and takes any number of arguments
+									fn[[:int]]   	 ; a function that takes an int and can return anything
+									fn[[string:int]] ; takes an int and returns a string
+									fn[[: int, int int, int string]] ; takes either an int, two ints, or an int and a string
+									fn[[int: int, string]] ; takes either an int or a string and returns an int
+
+									; this can be combined with a function value's ! operator to specify return types and parameter names
+									fn[[int]]&fn[int a:]! f ; takes an int named `a` and returns and int
+								</code></div>
+							</td>
+						</tr>
 				</table>
 				
 				<h5>Methods:</h5>
@@ -1839,6 +1929,36 @@
 							 		<code>fn.parse</code> and <code>var.parse</code> greatly increase safety of running external code over the normal <code>exec</code>
 							 			function in most programing languages (which executes statements from the string inline).
 								</div>
+							</td>
+						</tr>
+						<tr><td>paramType</td>
+							<td>type1 type2 ... </td>
+							<td>Returns a function type that requires the parameters to have certain types and names.
+								Each argument can either be a type value or an object where the first element is a type value for
+									that parameter position and the second element the name of that parameter.
+								<div class=example><code>
+									fn.paramType[string~] f ; a function that takes a string
+									fn.paramType[int~ int~] f ; a function that takes two ints
+									fn.paramType[{int~ 'a'}] f ; a function that has a single int parameter named a
+									fn.paramType[{string~ 's'} {int! 'i'}] f ; etc
+
+									; combine these to describe a function with multiple dispatch
+									fn.paramType[int~]$fn.paramType[string~] f ; A function that takes an int or a string
+								</code></div>
+							</td>
+						</tr>
+						<tr><td>condType</td>
+							<td>testFn[typeDispatchLists]</td>
+							<td>Returns a function type that matches function values who's parameters cause the testFn to return true.
+								The <code>typeDispatchLists</code> is a list where each element is an object representing a parameter,
+									and each parameter object is a list where the first element is a type and the second element is
+									the parameter name.
+								<div class=example><code>
+									; this represents a function where the first two parameter types must be the same
+									fn.condType[fn dispatch:
+										ret dispatch[0][0]~ == dispatch[1][0]~
+									] f
+								</code></div>
 							</td>
 						</tr>
 					</table> 
@@ -1933,7 +2053,7 @@
 		
 	</div>
 	
-	<div class="mainBox mainTitle" title="Types">
+	<div class="mainBox mainTitle" sectionTitle="Types">
 		<p>	A type is a special kind of macro that defines variables and constrains the values a variable can take on.
 		 	Unlike most programming languages, types in Lima are basically contracts, otherwise known as <a href="http://en.wikipedia.org/wiki/Guard_(computer_science)">guards</a>. 
 			As contracts, the type of a variable almost never affects normal program execution.
@@ -1987,7 +2107,7 @@
 			</tr>
 		</table>
 			
-		<div class="subBox1" title="Interfaces">	
+		<div class="subBox1" sectionTitle="Interfaces">
 			<p>	Lima's interfaces are very much like 
 					<a href="http://en.wikipedia.org/wiki/Trait_(computer_programming)">"traits" in SmallTalk</a>, or 
 					<a href="http://www.oreillynet.com/onlamp/blog/2006/08/roles_composable_units_of_obje.html">"roles" in Perl 6</a>
@@ -2011,13 +2131,13 @@
 					x1 = {a=5}			; throws an exception because the value doesn't have a member 'b'
 				</code></div>
 			</p>
-			<p> Its also used for multiple disptach.
+			<p> Interfaces are also used for multiple disptach.
 				For methods with parameters declared with interface types, 
 					a value matching that type must be passed into that parameter and the function can perform
 					structural dispatch (or structural typing) to decide which function-path to execute for that value.
 				This means that an object doesn't have to explicitly implement/inherit the interface, 
 					but can simply have the same <i>structure</i> the interface requires.
-				This is similar to whats refered to as duck typing and more similar to 
+				This is similar to whats referred to as duck-typing and more similar to
 					<a href="http://www.dartlang.org/articles/m1-language-changes/#no-explicit-interfaces">what Dart calls implicit interfaces</a>.
 				When an object inherits an object (via <code>mix</code>),
 					it implements that object's interface by virtue of having the same privileged members,
@@ -2062,22 +2182,22 @@
 			 
 				<div class=example><code>
 					var i1 = {var v}
-                    var i2 = {var v}
-                    
-                    
-                    var w = {mix[i1] v=1}   // implements i1's identity
-                    var x = {mix[i2] v=2}   // implements i2's identity
-                    var y = {v=3}           // implements neither's identity, but still matches both their interfaces
-                    var z = {mix[i1 i2:[v:v2]] v=4 v2=5} // implements both
-                    
-                    var f = fn
-                     i1! a: wout[a.v]
-                     i2! a: wout[a.v*1000]
-                     
-                    f[w] // outputs 1 because w matches both structure and identity of i1
-                    f[x] // outputs 2000 because x matches both structure and identity of i2
-                    f[y] // outputs 3 because y matches the structure of i1 (and i1 comes before i2, so has first priority)
-                    f[z] // errors as ambiguous - both interfaces match fully (structure and identity)
+					var i2 = {var v}
+					
+					
+					var w = {mix[i1] v=1}   ; implements i1's identity
+					var x = {mix[i2] v=2}   ; implements i2's identity
+					var y = {v=3}           ; implements neither's identity, but still matches both their interfaces
+					var z = {mix[i1 i2:[v:v2]] v=4 v2=5} // implements both
+					
+					var f = fn
+					 i1! a: wout[a.v]
+					 i2! a: wout[a.v*1000]
+					 					
+					f[w] ; outputs 1 because w matches both structure and identity of i1
+					f[x] ; outputs 2000 because x matches both structure and identity of i2
+					f[y] ; outputs 3 because y matches the structure of i1 (and i1 comes before i2, so has first priority)
+					f[z] ; errors as ambiguous - both interfaces match fully (structure and identity)
 				</code></div>
 			</p>
 
@@ -2105,7 +2225,7 @@
 					type promotion for interfaces defined in the same way.
 				
 				<div class=example>
-					<div><code>
+					<div class="codeBox">
 						var iGenA = fn type T: ; interface generator
 							ret {T a list[T] b}
 							
@@ -2115,7 +2235,7 @@
 						var a = {mix[iGenA[int~][a:a2]} ; a inherits from iGenA[int~] but renames a to a2
 						
 						memberSum[a] ; throws an exception
-					</code></div>
+					</div>
 				
 					The call <code>memberSum[a]</code> throws an exception because <code>a</code> doesn't have the same 
 						structure as iGenA[int~] and can't be promoted due to the fact that each call of iGenA generates a
@@ -2130,7 +2250,7 @@
                         Returns an object where its members are mapped to match the calling interface, just like how function arguments are promoted.
                         
         				<div class=example>
-        					<div><code>
+        					<div class="codeBox"><code>
         						var i = {var v}
         						var x = {mix[i:[v:vee]] v=5}
         						var xCast = i!.cast[x]
@@ -2147,7 +2267,7 @@
 		</div>
 	</div>
 	
-	<div class="mainBox mainTitle" title="Attributes">
+	<div class="mainBox mainTitle" sectionTitle="Attributes">
 		<p>	Context attributes (or just 'attributes') are macros that set a value for a statement as a whole
                 (and any underlying calls that statement makes).
 			An attribute is semi-constant in that it isn't mutable in a given scope,
@@ -2214,7 +2334,7 @@
 		</table>
 	</div>
 	
-	<div class="mainBox mainTitle" title="Number Postfixes">
+	<div class="mainBox mainTitle" sectionTitle="Number Postfixes">
 		<p>	Number postfixes are special functions written on the end of numeric literals.
 			They can take up to two arguments: the number being prefixed and a second argument that is 
 				a string of characters a-z, A-Z, 0-9, and _ (underscore).
@@ -2250,9 +2370,9 @@
 	
 			
 	
-	<div class="mainBox mainTitle" title="Literals">
+	<div class="mainBox mainTitle" sectionTitle="Literals">
 		
-		<div class="subBox1" title="nil">	
+		<div class="subBox1" sectionTitle="nil">
 			<p>	<code>nil</code> is a reference to nothing.
 				This is not the same as the value 0. 
 				Only nullable types (types with a question mark after them) can hold <span class=nil></span>.
@@ -2331,8 +2451,8 @@
 									x.a.f	; returns 'hi'
 									x.b?.f	; returns nil
 									x.b.f 	; would throw an error
-									x.b?[]	; returns nil
-									x.b[]	; would throw an error
+									x.b?[3]	; returns nil
+									x.b[3]	; would throw an error
 								</code></div>
 							</div>								
 						</td>
@@ -2371,7 +2491,7 @@
 			</p>
 		</div>
 		
-		<div class="subBox1" title="Objects">                                                         
+		<div class="subBox1" sectionTitle="Objects">
 			<table class="definitionTable">
 				<tr><td class=nearTop>
 						{	<span class=definitionBlock></span>
@@ -2382,27 +2502,51 @@
 							Can be used for making objects, lists, associative arrays, matricies, etc. 
 							There are three ways to add members in an object liberal: 
 							<ol><li>Adding values with implicit keys. E.g. <code>{'a' 'b' 'c'}</code></li>
-								<li>Adding values with explicit values as keys. E.g. <code>var x = {14:'hello' "b":4 5.9:0.1}</code>.
-									This is the same as setting values with the default bracket operator, 
-										e.g. that last object is the same as <code>x={} x[14]='hello' x['b']=4 x[5.9]=0.1</code>.
+								<li>Adding properties with literal values as keys using the <code>:</code> operator, for example:
+									<code>{14:'hello' "b":4 5.9:0.1}</code>.
+									This is the same as setting values with literal keys the default bracket operator,
+										e.g. that last object is the same as x at the end of this code:
+									<div class="codeBox">
+										var x={}
+										x[14]='hello'
+										x['b']=4
+										x[5.9]=0.1
+								</div>
 								</li>
-								<li>Adding values with variable names as keys. 
-									E.g. <code>{a=1 b=2 c=3}</code>.
+								<li>Adding named properties using the <code>:</code> operator, for example:
+									<code>{a:3 b:8}</code>.
+									This is the same as using string literals: <code>{'a':3 'b':8</code>
+									<div class="codeBox">
+										var x={}
+										x[14]='hello'
+										x['b']=4
+										x[5.9]=0.1
+									</div>
+								</li>
+								<li>Adding properties with keys from evaluated expressions using the <code>::</code> operator, for example:
+									<div class="codeBox">
+										var a = 4
+										{a::'hi'}  ; same as {4:'hi'}
+										{3+4::'yo'}  ; same as {7:'yo'}
+									</div>
+								</li>
+								<li>Adding privileged members with <code>=</code> (and any other operation that sets a value
+									on the calling scope), for example: <code>{a=1 b=2 c=3}</code>.
 									Creates a <span class=privileged></span> member.
-									This is the only way private members can be created and 
-										is also the only way a type can be ascribed to a key in an object literal.
+									This is the only way private members can be created in an object literal.
 									
 									<div class=example><code>
 										var x = {a=4}	; a is privileged here and can't be accessed via the default bracket operator
 										; are different
-										var z = {"a":4}	; a here is not privileged
+										var z = {a:4}	; a here is not privileged
 									</code></div>
 								</li>
 							</ol>
 																		
-							Any value can be a key, and keys are always differentiated using the equality operator (==).
-							Members defined using option 3 above have the type <code>var</code> by default (if no type is given).
-							Members defined using option 1 or 2 above have the type <code>var?</code> (ie they can be <code>nil</code>).
+							Any value can be a key, and keys are always differentiated using their hashcode first and their
+								equality operator (==) second.
+							Members defined using option 5 above have the type <code>var</code> by default (if no type is given).
+							Members defined using option 1-4 above have the type <code>var?</code> (ie they can be <code>nil</code>).
 						</p>
                         <p> Any statement can be run inside an object's scope, but any expression that resolves to nil will not add any
                             member to the object.
@@ -2458,16 +2602,16 @@
 							</code></div>
 
 
-                            The variable <code>_</code> is a special variable that, when used as a key in an object literal,
-                                stands for the name of the variable its being set to.
+                            The identifier <code>_</code> is a special identifier that, when used as a value in an object literal,
+                                stands for the in-scope variable with the same name as the key.
                             This can be used to set properties on an object in a
                                 <a href="https://en.wikipedia.org/wiki/Don%27t_repeat_yourself">DRYer</a> way.
 
-							<div class=example><code>
+							<div class=example><div class="codeBox">
 								var someLongName1 = 5, someLongName2 = 10
-								var x = {_=someLongName, _=someLongName2}     ; same as {someLongName=someLongName, someLongName2=someLongName2}
-                                var y = {_:someLongName, _:someLongName2} ; same as {'someLongName':someLongName, 'someLongName2':someLongName2}
-							</code></div>
+								var x = {someLongName=_, someLongName2=_} ; same as {someLongName=someLongName, someLongName2=someLongName2}
+								var y = {someLongName:_, someLongName2:_} ; same as {'someLongName':someLongName, 'someLongName2':someLongName2}
+							</div></div>
 
                             Value initializations set in the <span class=definitionBlock></span> never reference the value of any member
 								of that object directly.
@@ -2574,18 +2718,14 @@
 							Only defined for rectangular matricies when 
 								the number of rows in a is the same as the number of columns in b and vice versa.
 						</p>
-						<p>	This operator is also used for duplication of lists.
-							It is only defined when a </code>list</code> is being multiplied by an <code>int</code> value.
-							For example, <code>3*'moo'</code> would return "moomoomoo", 
-								and <code>3*{3 4}</code> would return <code>{3 4 3 4 3 4}</code>
-						</p>
 					</td>
 				</tr>
 				<tr><td><span class="Rvalue">a</span> / <span class="Rvalue">b</span></td>
 					<td>Product of inverse matricies.
 						Defined only where <code>b</code> is an invertible matrix.
-						Also defined only where either the matrix product of <code>a</code> on the inverse of <code>b</code> is defined,
-							or where <code>a</code> is <code>1</code>, in which case the operation indicates the inverse of <code>b</code>.
+						Also defined only where either the matrix product of <code>a</code> on the inverse of <code>b</code>
+							is defined, or where <code>a</code> is <code>1</code>, in which case the operation indicates
+							the inverse of <code>b</code>.
 					</td>
 				</tr>
 			</table>
@@ -2696,15 +2836,19 @@
 					</td>
 				</tr>	
 				
-				<tr><td>+= -= *= /= </td>
-					<td>Sets a variable to some operation of itself with an expression.
-						For example, <code>a+=b</code> is equivalent to <code>a = a + b</code>).
+				<tr><td>+= -= *= /= etc</td>
+					<td>Any operator ending in a single <code>=</code> is defined as the assignment of a value to
+							some operation of itself with an expression.
+						For example, <code>a+=b</code> is equivalent to <code>a = a + b</code>.
+						Another example, <code>a%$^%=b</code> is equivalent to <code>a = a %$^% b</code>.
+						The exception to this is that <code>!=</code> does not translate to <code>a = a ! b</code> but rather
+							to <code>!(a == b)</code>.
 						Can't be chained.
 					</td>
 				</tr>
 				<tr><td><span class="Ivalue"></span> .= <span class="Rvalue"></span></td>
 					<td>Same idea ^. 
-						The result of the expression following the operator is asigned to the calling object.
+						The result of the expression following the operator is assigned to the calling object.
 						Also can't be chained - you can't have two .= operators in the same expression. 
 						<code>x.=y.=z</code> will throw an exception.
 						
@@ -2756,11 +2900,10 @@
 				</tr>
 				
 				<tr><td><span class="Rvalue"></span><span class=splatOperator></span></td>
-					<td><p>	The <span class=splat>splat</span> operator (inspired by cofeescript) 
+					<td><p>	The <span class=splat>splat</span> operator (inspired by coffeescript), aka the spread operator,
 								is used to splay values in an object out as arguments to a function or values in an object literal.
 							It is also used as syntax for varargs in functions (variadic functions).
 						</p>
-						
 										
 						<p>	A <span class=splat></span> (<span class=splatOperator></span>) can be used to pass an object's members in as function arguments. 
 							<div class=example><code>
@@ -2770,7 +2913,7 @@
 								y = {1 2 3}
 								x[y...]	; outputs "123"
 								
-								z = {b=1 a=2 c=3}
+								z = {b:1 a:2 c:3}
 								x[z...]	; outputs "213" using z's members as named parameters
 							</code></div>
 						</p>
@@ -2785,17 +2928,15 @@
 						
 						<p>	<span class=splat>Splats</span> can be used in objects (and destructuring assignments).
 							<p class=example><code>
-								x = {1 2 3 x=4 34:'k'}
-								y = {
-									0 -3 
-									{}:'t' 
-									x... 
-									3 3:3 
-									'j':{'a' 'b' 'c' 'd' 'e' 'f'}
-								}
-								
-								{j={var[a b otherLetters... f]}} = y 	; the results are a='a', b='b', f='f', and otherLetters={'c' 'd' 'e'}
-								{var[one two other...]} = x 			; the results are one=1, two=2, three=3, and other={2:3 'x':4 34:'k'}
+								var x = {2 3 4}
+								var y = {a:8 b:9}
+
+								var a = {1 x... 5}  ; gets {1 2 3 4 5}
+								var b = {y... c:10} ; gets {a:8 b:9 c:10}
+
+								var[m j other]
+								{m j other...} = a  ; same as m=1 j=2 other={3 4 5}
+								{var[9:t 8:u 7:v]} = {9:'h' 8:'e' 7:'y'} ; same as t='h' u='e' v='y'
 							</code></p>	
 						</p>
 						
@@ -2956,8 +3097,9 @@
 			<table class="methodDefinitionTable innerBorder">
 				<tr><td><span class=bracketOperator></span></td>
 					<td>key1 key2 <span class=more></span></td>	
-					<td><p>	Accesses a member of an object/list. 
-							With only a single input key, it simply accesses that member. 
+					<td><p>	Accesses a non-privileged member of an object/list.
+							With only a single input key, it simply accesses that member.
+							If no non-privileged member exists at that key, it will return <code>nil</code>.
 							Multiple keys can be input, which would result in accessing a member of a member. 
 							For example, <code>object['a' 'b' 'etc']</code> is the same as <code>object['a']['b' 'etc']</code>. 
 							<div class="elaboration">
@@ -2974,8 +3116,10 @@
 							</div>
 						</p>
 						<p>	The bracket operator cannot acceess (read/write/create/etc) <span class=privileged></span> members of an object.
-							When the bracket operator is used to set a key that is already a <span class=privileged></span> member of the object, 
-								a new member will be created that can only be accessed through the bracket operator.
+							When the bracket operator is used to set a key that is already a <span class=privileged></span>
+								member of the object, a new non-privileged member will be created and that because there is
+								a privileged member of that name too, the non-privileged member can no longer be accessed via
+								the dot operator.
 							<div class=example><code>
 								var x = 
 								{	Funco = "Ok!"
@@ -3023,8 +3167,7 @@
 							</div>
 						</p>
 						<p>	Note that the <a href="http://docs.oracle.com/javase/1.4.2/docs/api/java/lang/Object.html#hashCode()">hashcode</a> 
-								used to map keys to values is automatically done based on the object's <code>==</code> operator, 
-								so the programmer doesn't have to worry about creating a "good" hash function for their objects.
+								used to map keys to values is the integer return value of the object's <code>hashcode</code> property.
 						</p>
 					</td>
 				</tr>							
@@ -3089,7 +3232,7 @@
 					</td>
 				</tr>
 				
-				<tr><td>Find</td>
+				<tr><td>find</td>
 					<td><span class=Rvalue>sequence</span></td>	
 					<td><p>	Returns a list of <span class=slice></span>s where each member in the list is a non-overlapping <span class=slice></span> of the object 
 								with the same sequence of elements as <span class=Rvalue>sequence</span>.
@@ -3151,7 +3294,7 @@
 						
 						<div class=elaboration>
                             Defined as the following:
-                            <div><code>
+                            <div class="codeBox"><code>
                                 tslice = fn startTime endTime:
                                     var start = meta[this].history[startTime]
                                     var end = meta[this].history[endTime]
@@ -3172,7 +3315,7 @@
 					<td><span class=Rvalue>end</span></td>
 					<td>
 				        Same as: 
-						<div><code>
+						<div class="codeBox"><code>
 							var now = time.before: 
 								list.tslice[now end]
 						</code></div>    
@@ -3330,8 +3473,8 @@
 					<td><p>	Returns the result of performing some statement on every member (value or key/value pair) in a list-object.
 							The <span class=Rvalue>memberStatment</span> tells how to modify the value.
 							The <span class=implicitVariable></span>s <code>v</code> (for value), 
-								<code>k</code> (for key), and <code>c</code> (for count) are declared by default, 
-								but can be aliased just like with the double-bracket operator.
+								<code>k</code> (for key), and <code>c</code> (for count of how many values have been looped through)
+								are declared by default, but can be aliased just like with the double-bracket operator.
 						</p>
 						<p class=example>
 							<code>
@@ -3469,7 +3612,7 @@
 					</td>
 				</tr>
 				
-				<tr><td>Group</td>
+				<tr><td>group</td>
 					<td>[expression]</td>	
 					<td><p>Returns a map where 
                              each key is the value that the expression was evaluated to, and
@@ -3497,8 +3640,8 @@
 				<tr><td>rm[[ ]]</td>
 					<td><span class=sliceStatement></span></td>	
 					<td><p>	Returns a list with the members matching the <span class=sliceStatement></span> removed and the list rekeyed. 
-							The <span class=sliceStatement></span> works just like <span class=doubleBracketOperator></span>.
-							<div><code>
+							The <span class=word>sliceStatement</span> works just like for <span class=doubleBracketOperator></span>.
+							<div class="codeBox"><code>
 								var x = {1 2 3 4 5 6};
 								x.rm[[2&lt;v&lt;6]]	; returns {1 2 6}
 							</code></div>
@@ -3506,7 +3649,7 @@
 					</td>
 				</tr>
 
-				<tr><td>Ins[[ ]]</td>
+				<tr><td>ins[[ ]]</td>
 					<td>value testExpression</td>	
 					<td><p>	Returns a new list where for every set of <span class=element>elements</span>,
 								<code>value</code> has been inserted between them as long as 
@@ -3532,7 +3675,7 @@
 					</td>
 				</tr>		
 				
-				<tr><td>Sort[ ]</td>
+				<tr><td>sort[ ]</td>
 					<td>objectMembers</td>	
 					<td><p>	Stable value sort, ascending. 
 							Returns an object where the members are sorted by some values inside the brackets.
@@ -3554,7 +3697,7 @@
 						</p>
 					</td>
 				</tr>
-				<tr><td>Sortus[ ]</td>
+				<tr><td>sortus[ ]</td>
 					<td>objectMembers</td>	
 					<td><p>	Unstable sort. 
 							Exactly like <code>Sort[ ]</code>, but doesn't ensure that order is preserved when values are equal 
@@ -3563,7 +3706,7 @@
 					</td>
 				</tr>
 				
-				<tr><td>Sort[[ ]]</td>
+				<tr><td>sort[[ ]]</td>
 					<td>objectMembers</td>	
 					<td><p>	Stable expression sort, ascending. 
 							Returns an object where the members are sorted based on comparison expressions inside the brackets.
@@ -3581,7 +3724,7 @@
 						</p>
 					</td>
 				</tr>
-				<tr><td>Sortus[[ ]]</td>
+				<tr><td>sortus[[ ]]</td>
 					<td>objectMembers</td>	
 					<td><p>	Unstable expression sort. 
 							Exactly like <code>Sort[[ ]]</code>, but doesn't ensure that order is preserved when 
@@ -3639,7 +3782,7 @@
 		</div>
 			
 		
-		<div class="subBox1" title="Numbers">	
+		<div class="subBox1" sectionTitle="Numbers">
 			
 			<table class="definitionTable">
 				<tr><td><span class=integer></span></td>
@@ -3811,30 +3954,7 @@
 				<tr><td>sign</td>	
 					<td>This <span class=pseudoMember></span> returns -1 if the number is negative, and 1 otherwise.
 					</td>
-				</tr>
-				
-				<tr><td>sci</td>	
-					<td>This <span class=pseudoMember></span> returns the number as a scientific notation string (e.g. '4.334*10^6')
-					</td>
-				</tr>
-				<tr><td>engr</td>	
-					<td>This <span class=pseudoMember></span> returns the number as an engineering notation string.
-						Uses the character 'e' to represent base-10 exponentiation (e.g. '4.334e6').
-					</td>
-				</tr>
-				<tr><td>roman</td>	
-					<td>This <span class=pseudoMember></span> returns the number as a roman numeral string.
-					</td>
-				</tr>
-				<tr><td>english</td>	
-					<td>This <span class=pseudoMember></span> returns the number as a plain english string.
-					</td>
-				</tr>
-				<tr><td>engOrdinal</td>	
-					<td>This <span class=pseudoMember></span> returns the number as an english ordinal string.
-					</td>
-				</tr>
-				
+				</tr>								
 				
 				<tr><td>error</td>	
 					<td>Returns a <code>probability</code> object describing the probabilities that the number has accumulated calculation
@@ -3842,7 +3962,7 @@
 						The calculation error is in absolute deviation from the true value.
 						This can be used to specify the intended precision of numeric operations.
 						<div class=example><code>
-                            frac x = 5.43
+                            real x = 5.43
                             df 10^4..10^5 n:
                                 x *= 1+1/</code><code>n
                             
@@ -3884,36 +4004,6 @@
 						</code></div>
 					</td>
 				</tr>
-			
-				<tr><td>sep</td>	
-					<td>num character</td>	
-					<td>Returns the number modified so that its string representation has separaters every <code>num</code> digits. 
-						<code>character</code> is optional, but if included sets the separater character. The default character is a comma.
-						For example: <code>wout 1000000.sep[3]</code> would print <code>1,000,000</code> and <code>wout 11110001.sep[4 "'"]</code> would print <code>1111'0001</code>.
-					</td>
-				</tr>
-				<tr><td>base</td>	
-					<td>num</td>	
-					<td>Returns the number modified so that its string representation is in base <code>num</code>. 
-						For example, <code>wout 7.base[2]</code> prints <code>111</code>
-					</td>
-				</tr>
-				<tr><td>places</td>	
-					<td>num</td>	
-					<td>Returns the number modified so that its string representation has a maximum of <code>num</code> decimal places.
-					</td>
-				</tr>
-				<tr><td>fpad</td>	
-					<td>num</td>	
-					<td>"Front padding". Returns the number modified so that its string representation has at least <code>num</code> digits, padded with 0s if neccessary.
-					</td>
-				</tr>
-				<tr><td>bpad</td>	
-					<td>num</td>	
-					<td>"Back padding". Returns the number modified so that its string representation has at least <code>num</code> digits, padded with 0s if neccessary.
-					</td>
-				</tr>
-				
 				<tr><td>mod</td>	
 					<td>num</td>
 					<td>True modulus (<code>x.mod[n]</code> is the absolute value of <code>x%n</code>)</td>
@@ -3971,7 +4061,7 @@
 						<div class=example>
 							While fractional ranges can't be written discretely, they can still be operated on.
 							For example, 
-							<div><code>
+							<div class="codeBox"><code>
 								var range = 2...5
 								2 &lt; range       ; returns true
 								2.34656 &lt; range ; returns true
@@ -4074,7 +4164,7 @@
 		</div>	
 				
 				
-		<div class="subBox1" title="Strings">
+		<div class="subBox1" sectionTitle="Strings">
 			<p>A string is, conceptually, a list of characters.</p>
 			
 			<p> Lima is designed to operate with any characters, from any encoding. 
@@ -4393,13 +4483,10 @@
 							</code></div>
 						</td>
 					</tr>
-					
-					<tr><td>a..b</td>	
-						<td>Returns a list of strings of the same length and less length between <code>a</code> through <code>b</code> (inclusive).
+					<tr><td>anInteger*aString</td>
+						<td>Duplicates a string a number of times.
 							<div class=example><code>
-								collate[{'a''b''c''d''e''f''g'}]:
-									var x = 'b'..'f'	; x gets {'b' 'c' 'd' 'e' 'f'}
-									var y = 'cf'..'de'	; x gets {'cf' 'cg' 'd' 'da' 'db' 'dc' 'dd' 'de'}
+								var x = 3*'moo' ; same as x = "moomoomoo"
 							</code></div>
 						</td>
 					</tr>
@@ -4415,10 +4502,10 @@
 	</div>
 	
 	
-	<div class="mainBox mainTitle" title="Core Library">
+	<div class="mainBox mainTitle" sectionTitle="Core Library">
 	   These variables are are part of core Lima and are all defined as <code>const</code> (and so can't be overridden).
 	
-		<div class="subBox1" title="Core Types">
+		<div class="subBox1" sectionTitle="Core Types">
 			<table class="definitionTable">
 				<tr><td><span class=var></span></td>	
 					<td>Any value except nil. 
@@ -4733,7 +4820,7 @@
 				
 			</table>
 			
-			<div class=subBox2 title="Core Parameterized Types">
+			<div class=subBox2 sectionTitle="Core Parameterized Types">
 				<p>	Parameterized and compound types are functions that return a type.
 				</p>
 				<table class="definitionTable">
@@ -4784,7 +4871,7 @@
 			</div>					
 		</div>
 		
-		<div class=subBox1 title="Core Objects">
+		<div class=subBox1 sectionTitle="Core Objects">
 			<table class="definitionTable">
 				
 				<tr><td>standardLibrary</td>	
@@ -4897,7 +4984,7 @@
 									<td><p>	Returns a reference type that can reference the passed type.
 											<div class=example><code>
 												ref[int] x       ; reference to an integer
-												ref[int$frac]     ; reference to an int or frac
+												ref[int$real]     ; reference to an int or real
 											</code></div>
 											
 											<span class=dotOperatorWithTypeParameter></span>
@@ -4958,7 +5045,7 @@
 												<code>x~~</code> would access the reference x points to (like *ptr in C). 
 												<code>x~~~</code> would mean to use the reference that the reference x points to, points to (like **ptr in C), etc. 
 												More examples:
-												<div>	
+												<div class="codeBox">
 													<code>
 														int: r=5 t=36
 														ref!: x y
@@ -4975,8 +5062,8 @@
 										<p>	This is also used to indicate that you want to use an <span class=attribute></span> or <span class=macro>macro</span>
 												rather than call it on the proceding code. 
 											For example,
-											<div><code>
-											{int~ frac~ var~} 	; building an object that contains type attributes
+											<div class="codeBox"><code>
+											{int~ real~ var~} 	; building an object that contains type attributes
 											function[if~ df~]	; passing the core macros <code>if</code> and <code>df</code> into a method
 											</code></div>
 										</p>
@@ -5155,7 +5242,7 @@
 								<td><span class=word>set</span></td>
 								<td>Returns a random value in the set using a random number generator chosen by default criteria.
 									Returns the same distribution of values the following generator would return:
-									<div><code>
+									<div class="codeBox"><code>
 										rand.generator[fn properties:
 											
 											var p = properties[10'000] ; indicates that the probability maps should be consistent for data-set ranging from 1 byte to 10 thousand bytes long
@@ -5303,7 +5390,7 @@
 						
 						<p> <span class=arb></span> can allow you to do things that almost no other programming language can: performance-based behavior. 
 					        For example, you could choose between three different algorithms for text differencing:
-                            <code>
+                            <div class="codeBox">
                                 private: algorithms = {
                                     minimal: fn[ ... ], ; produces the smallest output
                                     light: fn[ ... ],   ; uses the least memory
@@ -5311,16 +5398,16 @@
                                 }
                                 
                                 textDiff = arb[algorithms]
-                            </code>
+                            </div>
                             
                             And in your main program:
-                            <code>
+                            <div class="codeBox">
                                 optimize[5*cputime + 2*memory]:
                                     var textDiff = load['textDiff'].textDiff
                                     
                                     var diff = textDiff[file["someFile.txt"]]
                                     wout[diff] ; output on the console
-                            </code>
+                            </div>
                             
                             Each of those algorithms would produce different output (otherwise there would be no need to use <span class=arb></span>),
                                 but the appropriate one would be used for the system its running on based on the 
@@ -5714,7 +5801,7 @@
 										<tr><td>stats</td>
 											<td>Contains filesystem specific information about the file.
                                                 An example of stats info for a file in a usual linux file-system:
-                                                <div><code>
+                                                <div class="codeBox"><code>
                                                     { dev= 2114,
                                                       ino= 48064969,
                                                       mode= 33188,
@@ -5781,7 +5868,7 @@
 								<td><span class=word>filePath</span><span class=word>encoding</span></td>
 								<td>Returns a string-file obtained by decoding the file. 
 									This is the same thing as:
-									<div><code>
+									<div class="codeBox"><code>
 										; var x = file[path encoding]
 										var x = file[path].dec[encoding]
 										x.meta["fileEncoding"] = encoding
@@ -6049,7 +6136,7 @@
 											If you need both, you need to create two separate time objects.
 											<br>
 											
-											<div><code>
+											<div class="codeBox"><code>
 												; the following to sets of statements can be run completely in parallel
 												; which means that ta1 may be the exact same time as tb1
 												; and also means that tb2 might even be earlier than ta2 (if 'B.txt' takes less time to download and output)
@@ -6458,10 +6545,10 @@
 						<p> Inputs are intended to be used with event semantics:
 							<div class=example><code>
 								change[inputs[0].a]:
-                                    if inputs[0].a:
-                                        ; keydown
-                                     else:
-                                        ; keyup
+								    if inputs[0].a:
+								        ; keydown
+								     else:
+								        ; keyup
 							</code></div>
 						</p>
 						<p class="copiedNote inputDevices"> 
@@ -6586,7 +6673,7 @@
 			</table>
 		</div>
 
-		<div class="subBox1" title="Core Functions">
+		<div class="subBox1" sectionTitle="Core Functions">
 			<table class="methodDefinitionTable">
 				<tr><td>exit</td>
 				    <td>code</td>
@@ -6599,7 +6686,7 @@
 
 		
 		
-		<div class=subBox1 title="Core Macros">
+		<div class=subBox1 sectionTitle="Core Macros">
 			<table class="definitionTable">
 				<tr><td><span class=ready></span></td>
 					<td>Denotes that external inputs to the program within a statement are ready immediately (ie at compile time),
@@ -6647,14 +6734,14 @@
 						<div class=example><code>
 							main = fn:
 								wout[f[]] ; prints 42
-                                ; wout[z]   would throw an exception because z is hoisted but can't be accessed until what it refers to has been delcared
+							    ; wout[z]   would throw an exception because z is hoisted but can't be accessed until what it refers to has been delcared
 
 								var y = 5
 								wout[z]   ; prints 5
-                                ; wout[x]   would throw an exception because x isn't hoisted
+							    ; wout[x]   would throw an exception because x isn't hoisted
 
 								const var x = y   ; not hoisted since y isn't constant
-                                const var z ~> y
+							    const var z ~> y
 								const fn! f = fn: ret 42
 						</code></div>
 					</td>
@@ -7036,7 +7123,7 @@ Caused by:
 						</p>
 
 						<div class=elaboration>
-							<div><code>
+							<div class="codeBox"><code>
                                 var x = 5
                                 change[x]:
                                     wout['x changed to 'x]
@@ -7076,7 +7163,7 @@ Caused by:
 						</p>
 
 						<div class=elaboration>
-							<div><code>
+							<div class="codeBox"><code>
                                 var parent = {a=5}
                                 var child = { mix[parent]
                                     override a=100
@@ -7280,7 +7367,7 @@ Caused by:
 			</table>
 		</div>
 		
-		<div class=subBox1 title="Core Attributes">
+		<div class=subBox1 sectionTitle="Core Attributes">
 			<table class="definitionTable">
 
 				<tr><td><span class=ready></span></td>
@@ -7432,7 +7519,7 @@ Caused by:
 		
 		
 		
-		<div class=subBox1 title="Core Character Encodings">
+		<div class=subBox1 sectionTitle="Core Character Encodings">
 			<table class="definitionTable">
 			
 				<tr><td>bits</td>
@@ -7631,9 +7718,9 @@ Caused by:
 	</div>
 	
 	
-	<div class="mainBox mainTitle" title="Standard Library">
+	<div class="mainBox mainTitle" sectionTitle="Standard Library">
 	   
-	   <div class="subBox1" title="Standard Types">
+	   <div class="subBox1" sectionTitle="Standard Types">
 			<table class="definitionTable">
 				<tr><td>Infer</td>
 					<td>An inferred type. This is a special type that takes on a type based on the first value the variable is given.
@@ -7643,7 +7730,7 @@ Caused by:
 							the variable will get either the type <code>string</code> or <code>number</code>.
 						Otherwise, the variable will get an interface-type based on the value.
 						For example:
-						<div><code>
+						<div class="codeBox"><code>
 							Infer a = 5     ; a gets the type 'number'
 							Infer b = "hi"  ; b gets the type 'string'
 							Infer c = {x:5} ; c gets the type '{x:5}!'
@@ -7691,8 +7778,8 @@ Caused by:
 						To define an unsigned integer: <code>type.set[0..00] unsignedIntVariable</code>
 					</td>
 				</tr>
-				<tr><td><span class=frac></span></td>
-					<td>Signed fractional number. Represents all rational numbers. 
+				<tr><td><span class=real></span></td>
+					<td>Signed real number. Represents all rational numbers.
 						Has the following methods:
 							
 						<table class="methodDefinitionTable innerBorder">
@@ -7714,7 +7801,7 @@ Caused by:
 			</table>
 		</div>
 		
-		<div class=subBox1 title="Standard Objects">		
+		<div class=subBox1 sectionTitle="Standard Objects">
 			<table class="definitionTable">				
 				<tr><td><span class=false></span></td>	
 					<td>An alias for 0, meant to represent boolean values.
@@ -7854,7 +7941,7 @@ Caused by:
 								<td><span class="word">otherShape</span></td>	
 								<td>Returns a real number distance between the closest points from each shape.
 									<div class=example><code>
-										frac x = shape[3 1].distance[shape[1 1]]  ; returns 2
+										real x = shape[3 1].distance[shape[1 1]]  ; returns 2
 									</code></div>
 								</td>
 							</tr>
@@ -8003,7 +8090,7 @@ Caused by:
 											If you need both, you need to create two separate time objects.
 											<br>
 											
-											<div><code>
+											<div class="codeBox"><code>
 												; the following to sets of statements can be run completely in parallel
 												; which means that ta1 may be the exact same time as tb1
 												; and also means that tb2 might even be earlier than ta2 (if 'B.txt' takes less time to download and output)
@@ -8143,7 +8230,8 @@ Caused by:
 							A time-object can be converted to any representation, even ambiguous representations, for any zone or area.
 						</p>
 						
-						<code>time</code> objects have the following methods:
+						<p><code>time</code> objects have the following methods:</p>
+						
 						<table class="methodDefinitionTable innerBorder">
 							<tr><td>format</td>
 								<td><span class=word>timePattern</span> <span class=word>timeZone</span> <span class=word>translator</span></td>	
@@ -8837,7 +8925,7 @@ Caused by:
 									</p>
 									
 									<p>The answer is an object that looks like:
-                                        <div><code>
+                                        <div class="codeBox"><code>
                                         { header= {
                                             qr=&lt;query response>  
                                             opcode=___
@@ -9431,7 +9519,7 @@ Caused by:
 							<table class="definitionTable innerBorder">
 								<tr><td>[value]</td>
 									<td>Returns a string representing the passed value. Only outputs normal properties of the object (not privileged members).
-										<div><code>
+										<div class="codeBox"><code>
 											lion[5]       		; outputs "5"
 											lion[{1 2 3}] 		; outputs "{1 2 3}"
 											lion[{'a':3 'b':{'d':4}}] ; outputs "{a=3 b={d=4}}"
@@ -9455,7 +9543,7 @@ Caused by:
 			</table>
 	   </div>
 	   
-	   <div class="subBox1" title="Standard Functions">
+	   <div class="subBox1" sectionTitle="Standard Functions">
 			<table class="methodDefinitionTable">
 				
 				<tr><td>round</td>
@@ -9519,7 +9607,7 @@ Caused by:
 				<tr><td>mag</td>
 					<td>value</td>
 					<td>Returns the magnitude of a value. 
-						The value can be any number (int, flo, frac, complex, etc), or vector of numbers.
+						The value can be any number (int, flo, real, complex, etc), or vector of numbers.
 						It should be noted that this function is equivalent to the absolute value when used on non-vector numbers.
 					</td>
 				</tr>
@@ -9573,7 +9661,7 @@ Caused by:
 						</p>
 						<div class=elaboration> 
 							This is useful for defining getters and setters for an object.
-							<div><code>
+							<div class="codeBox"><code>
 								var o = {
 									internalX = 5
 									x = access[
@@ -9633,7 +9721,7 @@ Caused by:
 							var websocket = load['websocket']
 							websocket.connect['ws://localhost'] ; calls the connect function from that library
 
-							// load non-lima modules
+							; load non-lima modules
 							var crypto = load['./crypto-v1.0.0.lib'] ; loads crypto methods in the current scope
 							crypto.md5['something'] ; hypothetically in the crypto library
 
@@ -9682,7 +9770,7 @@ Caused by:
                                 <li>private</li>
                                 <li>postinstall - a list of dependencies, how to check if they're installed, and how to install them if they're not.
                                     <p>	Each item in the list should have the following format:
-            							<div><code>
+            							<div class="codeBox"><code>
             							{   name = <span class=word>name</span>             ; name of the dependency
             							    check = <span class=word>checkFunction</span>   ; returns true if the dependencies it is responsible for are met
             							    build = <span class=word>buildFunction</span>   ; builds a dependency
@@ -9767,7 +9855,7 @@ Caused by:
 			</table>
 		</div>
 
-		<div class=subBox1 title="Standard Macros">
+		<div class=subBox1 sectionTitle="Standard Macros">
 			<table class="definitionTable">
 
 				<tr><td><span class=wout></span></td>
@@ -9779,10 +9867,10 @@ Caused by:
 				
 				
 				<tr><td>				       				
-						<span class=cond></span> <span class=word>testFunction</span>
-						  <span class=condition>conditionParameters</span>:
+						<span class=cond></span> condName:: <span class=word>testExpression</span>
+						  <span class=condition>condition</span>:
 							<span class=statements></span>
-						  <span class=more>conditionParameters</span>
+						  <span class=more>condition</span>
 						  <span class=if_else></span>:
 							<span class=statements></span>
 							
@@ -9790,28 +9878,40 @@ Caused by:
 							<span class=more></span>
 						]
 					</td>
-					<td><p><span class=cond></span> is useful for making switch-statement-like constructs and more powerful templatized conditionals.
+					<td><p><span class=cond></span> is useful for making switch-statement-like constructs and more powerful
+							templatized conditionals.
 						</p>
 						
-						<p>Each set of <span class=condition>conditionParameters</span> are passed to the <span class=cond></span>'s <span class=word>testFunction</span>.
-						   If the <span class=word>testFunction</span> returns true, the <span class=statements></span> are executed and the <span class=cond></span> is complete.
-                           If not, the next set of <span class=condition>conditionParameters</span> are tested.
-                           If there is an <span class=if_else></span>, the <span class=statements></span> under it are executed if none of the <span class=condition>conditionParameters</span> 
-                              yield a <code>true</code> result from the <span class=word>testFunction</span>.
+						<p>The <span class=word>testExpression</span> is evaluted for each of
+							the <span class=condition>condition</span>.
+						   Has the implicit variable <code>v</code> that holds the value of the
+							<span class=condition>condition</span> being tested.
+						   The implicit variable can be renamed using <code>::</code>, which renames the condition parameter
+							to <code>condName</code>.
+						   If the <span class=word>testExpression</span> returns true, the <span class=statements></span>
+							are executed and the <span class=cond></span> is complete.
+                           If not, the next set of <span class=condition>condition</span> are tested.
+                           If there is an <span class=if_else></span>, the <span class=statements></span> under it are
+							executed if none of the <span class=condition>condition</span>
+                          	yield a <code>true</code> result from the <span class=word>testExpression</span>.
                               
 						   <div class=example><code>
-							cond fn[x: ret 50&lt;x.height[]]
+							cond 50&lt;v.height[]
 							 personA:  wout["The first"]
 							 personB:  wout["The second"]
 							 else:     wout["Nobody"]
 					           
 							; you can use else to attach fallback testFunctions
-							cond fn[x: ret 50&lt;x]
+							cond 50&lt;v
 							 34:  doSomething[]
 							 12:  doSomethingElse[]
-							 else: cond fn[x: ret x%10 > 5]
+							 else: cond v%10 > 5
 							  4:  doSomething[]
 							 else: doSomethingElse[]
+
+							; renaming the condition parameter
+							cond x:: x.has[4]
+							 {1 2 4}: doSomething[]
 						    </code></div>
 						</p>
 						<p>	See also: "<i>Emulating switch statement fallthrough in Lima</i>" under <i>Concepts</i>.
@@ -9849,7 +9949,7 @@ Caused by:
 								<tr><td><span class=break></span></td>
 									<td><p>	Macro that jumps straight out of the loop, skipping any lines of code in the current loop's block.
 											If referenced from a pointer, <code>break</code> will jump to the break location for where it was referenced from:
-											<div><code>
+											<div class="codeBox"><code>
 												df:	; infinite loop
 													var outerBreak = break~
 													var n=0
@@ -9915,7 +10015,7 @@ Caused by:
 							<p>	Most of the time, threads should be very short, and executes some code that outputs something.
 							</p>
 							
-							<div><code>
+							<div class="codeBox"><code>
 								wout['hi'@]         ; always written first
 								var data = getData[]
 								thread: wout[data]  ; might be written second or third
@@ -10049,15 +10149,14 @@ Caused by:
 								var x = {
 								    make:
 								    	this.connection = getConnection[]
-								     unmake: 
-                                        var t = unixtime.after:
-                                         this.connection.close[]
-                                        assert(meta[this].detachmentTime-t < 5) ; the destructor must be called within 5 seconds of the object becomming inaccessible
+								     unmake:
+								        var t = unixtime.after:
+								         this.connection.close[]
+								        assert(meta[this].detachmentTime-t < 5) ; the destructor must be called within 5 seconds of the object becomming inaccessible
 								}
-								
+
 								var newX = x[1 2] ; returns {a=3 b=5}
 								newX[99]          ; returns 100
-								
 							</code></div>                                
 							
 							Constraining the time the destructor is called can prevent some potential garbage collection optimization, but can 
@@ -10292,7 +10391,7 @@ Caused by:
 						Each passed module module path will automatically set a variable with the same file name
 							as the value passed in (minus the extension).
 						The following are equivalent:
-						<div><code>
+						<div class="codeBox"><code>
 							use['x@2.1.0' '../y/someModule']
 
 							var[ x=load['x@2.1.0'] someModule=load['../y/someModule.lima'] ]
@@ -10307,7 +10406,7 @@ Caused by:
 						The return value of the statements are returned from the <code>with</code> call.
 						Allows a programmer to easily section off blocks of code that are relatively independent,
 							which can make it a lot easier to refactor later, especially if you want to turn those blocks into separate functions.
-						<div><code>
+						<div class="codeBox"><code>
 							var x=1, y=2, z=3
 							var result = with x y:
 								var c = 3
@@ -10327,15 +10426,15 @@ Caused by:
 	   
 	</div>
 		
-	<div class="mainBox mainTitle" title="Concepts">
+	<div class="mainBox mainTitle" sectionTitle="Concepts">
 		<ol>		
 			
-			<li title="How to access elements from the end of a list">
+			<li sectionTitle="How to access elements from the end of a list">
 				In some languages, you have special syntax for accessing items from the end of an array like this: <code>someList[-4]</code>.
 				This would access the 4th to last element of the array.
 				Lima doesn't have that syntax (since any value is already a valid key to use in an object), 
 					but you can do the same thing in one of two ways:
-				<div><code>
+				<div class="codeBox"><code>
 				{1 2 3 4 5}.sort[-v][3]	; sort the list in revrse, then select the the 4th element (the 4th to last element of the original list - 2)
 				
 				x = {1 2 3 4 5}			; ..
@@ -10345,13 +10444,13 @@ Caused by:
 			</li>
 						
 			
-			<li title="How to get all the unique values in a list">
+			<li sectionTitle="How to get all the unique values in a list">
 				<code>x.group[v].keys</code>
 			</li>
 			
-			<li title="How to emulate the do-while loop from C">
+			<li sectionTitle="How to emulate the do-while loop from C">
 				To emulate a do-while, you can have an infinite loop that has a break condition at the end of it:
-				<div><code>
+				<div class="codeBox"><code>
 				while 1: 	; the 'do' of C's do-while
 					wout "I'm finally in the loop!"@
 					; ....
@@ -10359,8 +10458,8 @@ Caused by:
 				</code></div>
 			</li>
 			
-			<li title="How to reverse a list and how to do a descending sort">
-				<code>
+			<li sectionTitle="How to reverse a list and how to do a descending sort">
+				<div class="codeBox">
 					var x = {1 2 3}
 					x.sort[-k] ; sort by the negative of the index (key)
 					; returns {3 2 1}
@@ -10371,15 +10470,15 @@ Caused by:
 					
 					y.sort[[ !(v&lt;v2) ]] ; the complement of any expression in sort[[ ]] is a reverse sort
 					; also returns {93 5 5 2 1 0 -4}
-				</code>
+				</div>
 			</li>
 			
-			<li title="How to find a minimum or maximum">
+			<li sectionTitle="How to find a minimum or maximum">
 				Because lima will optimize away most unneccessary processing, finding a minimum can use the first value returned from a sort.
 				It might seem nice to have a <code>minimum</code> function, but what happens when you need to find the 4th lowest value in a list? 
 				Or if you need all 4 lowest values? 
 				Using sort gives a good generalized way of finding this type of thing: 
-				<div><code>
+				<div class="codeBox"><code>
 					var x = {5 2 87 9 6 8 4}
 					x.sort[v][0]	; sort by value and get the first element - the minimum
 					
@@ -10391,10 +10490,10 @@ Caused by:
 				</code></div>
 			</li>
 
-			<li title="How to create a static class member">
+			<li sectionTitle="How to create a static class member">
 				Lima doesn't have a `static` keyword like C++ does, but it can still do the same thing.
 				You just need to use a reference:
-				<div><code>
+				<div class="codeBox"><code>
 					var class = {
 						ref myStaticProperty ~> 0
 						make:
@@ -10426,7 +10525,7 @@ Caused by:
 				    But if you want to create a static variable initialized to a copy of a variable rather than referencing that variable,
 					   like static members in C++, just create a copy first:
                 </div>
-				<div><code>
+				<div class="codeBox"><code>
 					var x = 5
 
 					var class = {
@@ -10450,26 +10549,26 @@ Caused by:
 				</div>
 			</li>
 			
-			<li title="How to re-key an array">
+			<li sectionTitle="How to re-key an array">
 				If you select a slice of a list or object, the keys are preserved. 
 				In such cases, you might want to rekey the array, so that all its members are elements.
-				<div><code>
+				<div class="codeBox"><code>
 					"hello"[[k>2]]			; returns the object {3:'l' 4:'o'}
 					"hello"[[k>2]].sort[k]	; returns the object {0:'l' 2:'o'}, or equivalently "lo"
 				</code></div>
 			</li>
 			
-			<li title="How to do something only between items? Is there a 'join'/'implode' method?">				
+			<li sectionTitle="How to do something only between items? Is there a 'join'/'implode' method?">
 				You can emulate classical string join (implode in php) using the psuedo-method <code>ins</code> and the <code>join</code> method:
-				<div><code>
+				<div class="codeBox"><code>
 					var L2 = {1 2 3 4 5}.ins[[', ']]    ; this returns the list {1 ', ' 2 ', ' 3 ', ' 4 ', ' 5}
 					wout[L2.join[a.cat[b]]]             ; this will print the list with commas
 				</code></div>
 			</li>
 			
 			
-			<li title="How to access shadowed variable names using self.">
-				<code>
+			<li sectionTitle="How to access shadowed variable names using self.">
+				<div class="codeBox">
 					var x = 5        ; x1
 					var y = {        ; y1
 					  x1~>self.x
@@ -10484,12 +10583,12 @@ Caused by:
 					    	   ; trying to access 'x' here is illegal
 					     }
 					}
-				</code>
+				</div>
 			</li>
 			
-			<li title="Accessing object members shadowed by nested objects">
+			<li sectionTitle="Accessing object members shadowed by nested objects">
 				The trick is to make a reference to the object itself
-				<div><code>
+				<div class="codeBox"><code>
 				x = 
 				{	mythis ~> this	; mythis points to this
 					myself ~> self	; myself points to self
@@ -10517,10 +10616,10 @@ Caused by:
 				</code></div>
 			</li>
 			
-			<li title="How to describe a hardware bus in Lima">
+			<li sectionTitle="How to describe a hardware bus in Lima">
 			</li>
 			
-			<li title="Accessing overridden methods">
+			<li sectionTitle="Accessing overridden methods">
 				<code>
 				x = 
 				{	a = 5
@@ -10543,50 +10642,50 @@ Caused by:
 				</code>						
 			</li>
 			
-			<li title="Generics using <code>type</code> variables">
+			<li sectionTitle="Generics using <code>type</code> variables">
 		      Lima doesn't quite have the same kind of generics that a language like Java has, 
                 because values in Lima don't have a "type" (instead a  given type-set can either include a value or not). 
               However, you can still do most of the things you would want generics for using variables containing types:
-			  <div><code>
+			  <div class="codeBox"><code>
 				var Statistics = fn type T:
-                    ret { 
-                      list[T] percentiles ; 0, 20, 40, 60, 80, 100
-                      T mean
-                      T median
-                    }
-                    
-                var x = Statistics[int] ; returns a statistics object where the type T is 'int'
+				    ret {
+				     				 list[T] percentiles ; 0, 20, 40, 60, 80, 100
+				      T mean
+				      T median
+				    }
+
+				var x = Statistics[int] ; returns a statistics object where the type T is 'int'
 			  </code></div>
 			  
 			  In Lima, lists of a subclass can be passed anywhere a list of a superclass is required - ie
 				<a href="https://blog.merovius.de/2018/06/03/why-doesnt-go-have-variance-in.html">covarience</a>a> is assumed.
 			  This isn't true in, for example, java. Here's an example in Lima:
                  
-			  <div><code>
+			  <div class="codeBox"><code>
 				var Sublist = {
-                    mix[list]
-                    
-                    first = fn:
-                        ret alist[0]
-                }
-                
-                var see = fn list[int] alist:
-                    wout[list]
-                
-                Sublist[int] x = {1 2 3}
-                
-                see[x] // is callable even tho the parameter is required to be a 'list[int]'
+				    mix[list]
+				    
+				    first = fn:
+				        ret alist[0]
+				}
+				
+				var see = fn list[int] alist:
+				    wout[list]
+				
+				Sublist[int] x = {1 2 3}
+				
+				see[x] // is callable even tho the parameter is required to be a 'list[int]'
 			  </code></div>
 			</li>
 			
-			<li title="Creating generators, custom iterators, and coroutine-like semantics in lima">
+			<li sectionTitle="Creating generators, custom iterators, and coroutine-like semantics in lima">
 				<p> Generators and custom iterators aren't neccessary in lima, because optimizations like lazy list building (infinite or finite lists) 
 						and futures/promises, take the burden off the programmer, and puts it on the compiler/interpreter. 
 					Things done with coroutines should be done using normal list semantics (which makes code more consistent and allows the list results from these to be operated on by any function that operates on a list).
 					Generators, custom iterators, and corountines can all be implemented either using function immediates, list semantics, or threads.
 					
 					For example, a custom iterator:
-					<div><code>
+					<div class="codeBox"><code>
 						var threeTimes = fn f:
 							df 1<span class=rangeOperator></span>3:
 								f[]
@@ -10597,7 +10696,7 @@ Caused by:
 					</code></div>
 					
 					or a generator:
-					<div><code>
+					<div class="codeBox"><code>
 						createInfiniteList = fn:
 							var theList = {}
 							var next = 1;
@@ -10613,7 +10712,7 @@ Caused by:
 				</p>
 				<p> Lima doesn't need semantics like yield to impliment coroutines.
 					In ECMAScript 4:
-					<div><code>	
+					<div class="codeBox"><code>
 						function fringe (tree) {
 							if (tree is like {left:*, right:*}) {
 								for (let leaf.in fringe(tree.left))
@@ -10633,7 +10732,7 @@ Caused by:
 						}
 					</code></div>
 					<p>The same can be done much more simply in lima like this:<p>
-					<div><code>
+					<div class="codeBox"><code>
 						fringe = fn	tree:	; returns a (possibly lazily constructed) list 
 							if like[tree {var[left right]}]:
 								ret fringe[tree.left].cat[fringe[tree.right]]
@@ -10645,16 +10744,16 @@ Caused by:
 							wout x
 					</code></div>
 			</li>
-			<li title="Creating tuples using an array of types">
+			<li sectionTitle="Creating tuples using an array of types">
 				<code>
 					chooseset[int string fn!]	; maybe this is wrong?
 				</code>
 			</li>
 			
-			<li title="Reversing a linked list in Lima">
+			<li sectionTitle="Reversing a linked list in Lima">
 				Tho there would probably be no reason to ever create a linked list in Lima,
 					it's informative to show how one of the most common interview questions is done:
-				<code>
+				<div class="codeBox">
 					// head node of a linked list
 					node = { 
 					    ref? next 
@@ -10669,15 +10768,15 @@ Caused by:
 					main: 
 					  var head = {"A" next~>{"B" next~>{"C" next~>{"D"}}}}
 					  reverse[head]	
-				</code>
+				</div>
 			</li>
 	
 									
-			<li title="Creating C unions using class and set syntax">
-				<code>
+			<li sectionTitle="Creating C unions using class and set syntax">
+				<div class="codeBox">
 					aUnion = 
-					{   chooseset[frac int string] value       ; using a set of types as a tuple type
-						acc f               ; frac accessor
+					{   chooseset[real int string] value       ; using a set of types as a tuple type
+						acc f               ; real accessor
 						[  ret ref[value]
 						]
 						acc i
@@ -10687,17 +10786,17 @@ Caused by:
 						[	ret self.f		; string accessor
 						]
 					}
-				</code>
+				</div>
 			</li>
 
-			<li title="Understanding operators that return macros">
+			<li sectionTitle="Understanding operators that return macros">
 		    	Since anything in Lima can potentially return a macro, it may be confusing to think about how operator precendence interacts
 					in exprssions where macros may be returned from one part of the expression.
 				Operator precedences are resolved normally, and when one resolves to a macro the remaining expression is passed to the macro,
 					which may consume only part of that remaining expression.
 				Once the macro resolves, expression resolution continues as normal.
 				An example:
-			  <code>
+			  <div class="codeBox">
 				; Assume that operator precedence is the same as normal arithmetic and
 				; assume that b*1 resolves to b, and a+b returns a macro
 				a + b*1 + 4*5
@@ -10708,27 +10807,27 @@ Caused by:
 				  
 				; if someMacro only consume "+ 4", and returns 40 this will then resolve to:
 				40*5
-			  </code>
+			  </div>
 			</li>
 			
-			<li title="Using don't cares in logic">
+			<li sectionTitle="Using don't cares in logic">
 				You can use <code>arb</code> to implement don't cares in an if statment:
-				<code>
+				<div class="codeBox">
 					if: a==5 $ arb[{true false}]
 						; do something
-				</code>
+				</div>
 				
 				This means that it will always <code>; do something</code> if a equals 5, but if a does not equal 5, 
 					then the compiler can choose whether or not to execute that code (if it somehow simplifies the logic of the program)
 			</li>
 			
 			
-			<li title="Using an object as a set">
+			<li sectionTitle="Using an object as a set">
 			</li>
 			
-			<li title="Doing SQL-like selects from objects">
+			<li sectionTitle="Doing SQL-like selects from objects">
 				In SQL:
-				<div><code>
+				<div class="codeBox"><code>
 					select productid, sum(unitprice * quantity) as total
 					from o in db.orders
 					inner join rd in db.orderdetails
@@ -10739,16 +10838,16 @@ Caused by:
 
                 <br>
 				and in Lima:
-				<div><code>
+				<div class="codeBox"><code>
 					db.orders.map[ {mix[ v db.orderdetails[[o: o.orderid == v.orderid]][0] ]} ] ; join
 						[[ v.zipcode == 94503 ]]											; where
 						.map[ {productId=v.productId  price=v.unitprice*v.quantity][0].rd 	; 
 						.group[v.productId].map[{ v[0].productId  v.join[a.price+b.price] }]
 				</code></div>
 			</li>
-			<li title="Doing XQuery/XPath-like selects from objects">
+			<li sectionTitle="Doing XQuery/XPath-like selects from objects">
 				In XQuery:
-				<div><code>
+				<div class="codeBox"><code>
 					for $b in $bs/book
 					return
 					 &lt;result>
@@ -10758,15 +10857,15 @@ Caused by:
 				</code></div>
 				
 				And in Lima:
-				<div><code>
+				<div class="codeBox"><code>
 					bs.book[[ v[{'title' 'author'}.has[k]] ]]			; one way
 					bs.book[[ {title=v.title  author=v.author} ]]	; another way
 				</code></div>
 			</li>
 			
 			
-			<li title="Function references used with dynamically created anonymous functions">
-				<code>
+			<li sectionTitle="Function references used with dynamically created anonymous functions">
+				<div class="codeBox">
 				ref.fn theFunc
 				anonFuncCreator = fn list[string string] characters:	; takes in a mapping from character to character
 					theFunc ~> fn string a:	; create anonymous function
@@ -10777,25 +10876,25 @@ Caused by:
 							ret map[a]
 						 else:
 							ret a	; returns input character if there is no mapping
-				</code>
+				</div>
 			</li>
 			
 			
 			
-			<li title="Using functions like a wires in Verilog and other hardware description languages">
+			<li sectionTitle="Using functions like a wires in Verilog and other hardware description languages">
 				In hardware design, a wire is what connects an input of a device to the output of another device. 
 				In Lima, one can describe the same functionality as a wire using functions:
-				<code>
+				<div class="codeBox">
 				main = fn:
 					int[ a=2 b=5 c=13]
 					fn! aWire = fn[ ret c+b*a ]	; acts like a wire
 					wout aWire[]   ; will print '23' (13+5*2)
 					a+=4
 					wout aWire[]   ; will print '43' (13+5*6) 			
-				</code>
+				</div>
 			</li>
 			
-			<li title="Event handling in Lima">
+			<li sectionTitle="Event handling in Lima">
 				There are two ways to do event-driven-like programming:
                 <ul><li>list iteration and slicing</li>
 					<li>variable observation</li>
@@ -10804,7 +10903,7 @@ Caused by:
                 <p>In traditional programming langauges, programming with events is done by setting up callback handlers that 
                 are called when an event happens, for example in javascript:
 				</p>
-                <div><code>    
+                <div class="codeBox"><code>
                 emitter.on('someEvent', function(eventData) {
                    doSomethingWith(eventData)
                 })
@@ -10837,7 +10936,7 @@ Caused by:
                 </p>
                 
                 <p> Another way to do event handling is by doing variable observation using the 'change' function:
-                    <div><code>
+                    <div class="codeBox"><code>
                     var events  = []
                     
                     ; this event isn't printed because it happens before the change handler is set up
@@ -10861,12 +10960,12 @@ Caused by:
 			</li>				
 				
 			
-			<li title="Circular Dependencies in Lima">					
+			<li sectionTitle="Circular Dependencies in Lima">
 				In Lima, circular dependencies can not only happen for module dependency loading, but can also happen because 
                     of dependencies between variables in the code. 
                 For example:
 				
-                <div><code>
+                <div class="codeBox"><code>
                  var x = 5
                  var a = {1 2 3}
                  var slice = v.tslice[process.end]
@@ -10885,27 +10984,27 @@ Caused by:
 				This behavior should throw an exception if detected.
 			</li>	
 			
-			<li title="Using 'change' to emulate 'posEdge' and 'negEdge' like in Verilog and other hardware description languages">					
-				<code>
+			<li sectionTitle="Using 'change' to emulate 'posEdge' and 'negEdge' like in Verilog and other hardware description languages">
+				<div class="codeBox">
 				change[a:oldValue]:  
 					if oldValue == 0 && a==1: ; reacts to a positive edge: 0 to 1
 						; do something
 					 oldValue == 1 && a==0: ; reacts to a negative edge: 1 to 0
 						; do something
-				</code>
+				</div>
 			</li>				
 				
-			<li title="How to check if an object 'has' a member">
-				<code>
+			<li sectionTitle="How to check if an object 'has' a member">
+				<div class="codeBox">
 				var o = {1 3 9 12 15}
 				var o2 = {var[x=90]}
 				o.keys >= {2}	; true (has the value 9 at index 2)
 				o.keys >= {12}	; false
 				o2.keys >= 'x'	; true since o2 has a defined member x
-				</code>
+				</div>
 			</li>		
 			
-			<li title="Testing for set relationships and value containment">					
+			<li sectionTitle="Testing for set relationships and value containment">
 				Testing set comparisons between two lists can be done in multiple ways. 
 				For consistency, only one of those ways is preferred and the compiler will correct code that uses the un-preferred comparisons.
 				
@@ -10914,7 +11013,7 @@ Caused by:
 						<ul><li><span style="color:red;">Preferred</span>: 
 								<code>{theItem} < theList</code> asks "Is the object consisting only of theItem a subset of theList?"
 								
-								<div><code>
+								<div class="codeBox"><code>
 								var o = {1 3 9 12 15}
 								var o2 = {'H'}
 								{3} <= o ; true
@@ -10948,25 +11047,25 @@ Caused by:
 				</ol>						
 			</li>
 			
-			<li title="Cutting values from an object/list or file">					
+			<li sectionTitle="Cutting values from an object/list or file">
 				<ul><li><span style="color:red;">Preferred</span>: 
-						<p> <code>
+						<p> <div class="codeBox">
 						        var conditions = fn k: (200<span class=rangeOperator></span>285).has[k]
                                 var charactersToCut = aList[[conditions[k]]]
                                 aList.rm[[conditions[k]]]
-                            </code>
+                            </div>
 						</p>
 						<p>	After this code is run, <code>aList</code>'s <span class=element>elements</span> with keys larger than 285 are shifted "left" 
 								so that an <span class=element></span> originally having the key 286 will now have the key 200, etc.
 							This method works on members that are not <span class=element>elements</span>, but no shifting happens.
 						</p>
 					</li>
-					<li><div><code>
+					<li><div class="codeBox"><code>
 						var charactersToCut = aList[[(200<span class=rangeOperator></span>285).has[k]]]
 						aList = aList[ !({k} < charactersToCut.keys) ].sort[k]	; get the list without the cut characters and rekey them (via sort)
 						</code></div>
 					</li>
-					<li><div><code>
+					<li><div class="codeBox"><code>
 						var charactersToCut = aList[[(200<span class=rangeOperator></span>285).has[k]]]
 						df charactersToCut v k: aList[k] = nil	; delete all the members that were cut
 						</code></div>
@@ -10974,7 +11073,7 @@ Caused by:
 				</ul>
 			</li>
 			
-			<li title="Where is text-mode for opening files?">					
+			<li sectionTitle="Where is text-mode for opening files?">
 				Files are always opened as binary in Lima.
 				Text-mode, in a language like C, encodes newlines in a platform specific on certain platforms.
 				In reality, this is just another encoding, and Lima treats it that way.
@@ -10982,11 +11081,11 @@ Caused by:
 					decoder that handles those OS-specific newlines (e.g. <code>dosText</code>).
 			</li> 
 			
-			<li title="Difference between <code>list[[ list2[[v2:v==v2]].join[a$b] ]].join[a&b]</code> and <code>list2[[ list[[v1: v==v1]].join[a&b] ]].join[a$b]</code>">					
+			<li sectionTitle="Difference between <code>list[[ list2[[v2:v==v2]].join[a$b] ]].join[a&b]</code> and <code>list2[[ list[[v1: v==v1]].join[a&b] ]].join[a$b]</code>">
 				The first means "Does every member in list equal some member of list2?", 
 					while the second means "Does any member in list2 equal every member of list2?". 
 				Example, 
-				<code>
+				<div class="codeBox">
 				{1 2 3}[[ {4 5 6}[[v2: v == v2]][<b>$</b>] ]][<u>&</u>] ; is the same as:
 				{4 5 6}[[v2: 1 == v2]][<b>$</b>] <u>&</u> {4 5 6}[[v2: 2 == v2]][<b>$</b>] <u>&</u> {4 5 6}[[v2: 3 == v2]][<b>$</b>] ; which is the same as:
 				(1==4 <b>$</b> 1==5 <b>$</b> 1==6) <u>&</u> (2==4 <b>$</b> 2==5 <b>$</b> 2==6) <u>&</u> (3==4 <b>$</b> 3==5 <b>$</b> 3==6)
@@ -10995,26 +11094,26 @@ Caused by:
 				{4 5 6}[[ {1 2 3}[[v2: v == v2]][<u>&</u>] ]][<b>$</b>] ; is the same as:
 				{1 2 3}[[v2: 1 == v2]][<u>&</u>] <b>$</b> {1 2 3}[[v2: 2 == v2]][<u>&</u>] <b>$</b> {1 2 3}[[v2: 3 == v2]][<u>&</u>] ; which is the same as:
 				(4==1 <u>&</u> 4==2 <u>&</u> 4==3) <b>$</b> (5==1 <u>&</u> 5==2 <u>&</u> 5==3) <b>$</b> (6==1 <u>&</u> 6==2 <u>&</u> 6==3)
-				</code>
+				</div>
 			</li>	
 
-			<li title="Creating a singleton with a reference">
+			<li sectionTitle="Creating a singleton with a reference">
 			
 			</li>	
-			<li title="Counting items in a list">
+			<li sectionTitle="Counting items in a list">
 				<code>list[[v==value]].len</code> counts the number of members that equal <code>value</code>
 			</li>	
-			<li title="Finding the index of an item">
+			<li sectionTitle="Finding the index of an item">
 				<code>list[[v==value]].keys[0]</code> finds the index of the first member of the list that equals <code>value</code>
 			</li>	
-			<li title="How to floor and ceiling a number">
+			<li sectionTitle="How to floor and ceiling a number">
 				<code>
 				var x = 5.23456
 				var floor = x//1		; exactly like floor
 				var ceiling = x//1+1	; exactly like ceiling
 				</code>
 			</li>	
-			<li title="List comprehension using conditional array accessing">
+			<li sectionTitle="List comprehension using conditional array accessing">
 				The Haskal list comprehension syntax:
 				<div><code>s = [ 2*x | x <- [0<span class=rangeOperator></span>100], x^2 > 3 ]</code></div>
 				and the equivalent python list comprehension syntax:
@@ -11022,16 +11121,16 @@ Caused by:
 				can be done in Lima by doing:
 				<div><code>s = (0..100)[0 100][v^2 > 3][[v*2]]</code></div>
 			</li>		
-			<li title="Doing <code>filter</code> using the list[  ] syntax">
+			<li sectionTitle="Doing <code>filter</code> using the list[  ] syntax">
 				The filter function in python and other languages creates a new list of items from the items in a list that cause some function to return true. 
 				For example, "filter(list, GT4)" might return a list of elements that are greater than 4. 
 				In lima this can be done like this: <code>list[[v>4]]</code>
 			</li>
 			
 				
-			<li title="How to select a column from a row-first matrix (or a row from a column-first matrix)">
+			<li sectionTitle="How to select a column from a row-first matrix (or a row from a column-first matrix)">
 				To select a list of second-dimension items from a multi-dimensional list, you'd use the map method. E.g.:					
-				<div><code>
+				<div class="codeBox"><code>
 					var rowFirstMatrix = {
 						{1 2 3}
 						{4 5 6}
@@ -11044,12 +11143,12 @@ Caused by:
 				</code></div>
 			</li>
 			
-			<li title="Where are my enums?">
+			<li sectionTitle="Where are my enums?">
 				Lima doesn't have an enum construct, but you can still do enums using a pattern some lazy programers already use: returning strings.
 				In most languages, the IDE and compiler don't have any insight into the values a function can return, but in Lima they do.
 				Using simple strings as enums gives the benefits of not having to explicitly enumerate all possible values 
 					(duplicating the values you would already be using).
-				<div><code>
+				<div class="codeBox"><code>
 					var colors = fn int x:
 						if x == ?0::
 						 1:	ret 'blue'
@@ -11062,18 +11161,17 @@ Caused by:
 						wout['GREEN!']
 					 color == 'purpel':		
 						wout['PURPLE!']	; IDE/compiler/interpreter should tell you this code path can never happen because the function will never return that misspelling 'purpel'
-						
 				</code></div>
 			</li>
 			
 				
-			<li title="When to declare uninitialized">
+			<li sectionTitle="When to declare uninitialized">
 				Lima will attempt to find any variables that are un-initialized upon first read access. 
 				When a variable has a particular spot in your program that it is set, it is best to let it be set there, rather than setting it in both there and at the declaration. 
 				The reason for this is that you can find problems earlier if you don't build redundancies into your program. 
 				A redundancy can make your program work the first iteration of a process, but then it will fail the second time (or later) - which is a much more mysterious problem to debug.
 			</li>	
-			<li title="Inheritance in Lima">	
+			<li sectionTitle="Inheritance in Lima">
 				<p>	Lima doesn't have traditional inheritance.
 					Lima instead takes the approach of languages like lua, lisp, and Ruby in providing "mixins" or "traits" rather than parent-child inheritance. 
 					Lima's form of inheritance is what's formally referred to as 'traits' (tho unlike tranditional traits, 
@@ -11090,12 +11188,12 @@ Caused by:
 				</p>	
 			</li>
 			
-			<li title="atexit - a function that runs when the program exits">
+			<li sectionTitle="atexit - a function that runs when the program exits">
 				Lima doesn't offer an atexit function. 
 				This is because atexit functions are prone to cause scattered code. 
 				Instead, if you want to do something like this, create a function that does exit code. 
 				Whenever you need to For example:
-				<div><code>
+				<div class="codeBox"><code>
 				fn exitFunc
 				[   5+4
 					doSomeFunction[ ]
@@ -11110,17 +11208,17 @@ Caused by:
 				Also, object desctructors could cover the use cases you would use atexit for.
 				Or possibly you could use a try-finally block for this as well.
 			</li>	
-			<li title="Does Lima do proper tail calls?">
+			<li sectionTitle="Does Lima do proper tail calls?">
 				Lima was built with the intention of being fully automatically opimized, 
 					and therefore doesn't have any specification of concepts like tail-calls that affect the speed of a program, but not the output.
 				In short, any reasonable Lima implementation should implement proper tail calls, but it isn't part of the language.
 			</li>			
 				
-			<li title="How do to short circuit evaluation?">
+			<li sectionTitle="How do to short circuit evaluation?">
 				<p>	Lima doesn't do short circuit evaluation by default 
 						(tho it may optimize certain boolean operations such that they do short-circuit evaluation under the hood).
 					So how do you do it when you want it?
-					<div><code>
+					<div class="codeBox"><code>
 						;In java, you might want to do things like this every once in a while:
 						if(	y != 0 && 5/y > 1 
 							|| x.equals("yes") && testFunctionWithSideEffects()
@@ -11139,7 +11237,7 @@ Caused by:
 				</p>
 			</li>
 			
-			<li title="String interpolation is evil">
+			<li sectionTitle="String interpolation is evil">
 				String interpolation is really just another way to concatenate variables with strings
 				On the surface, string interpolation seems like a nice feature that makes strings more concise.
 				The downsides, however, far outweigh that small benefit. 
@@ -11156,7 +11254,7 @@ Caused by:
 						</p>
 					</li>
 					<li>Its not that much shorter than lima:
-						<div><code>
+						<div class="codeBox"><code>
 							; ruby
 							"the meaning of life is #{11+31}!"
 							"#{a} and #{b} and #{c} and #{d}"
@@ -11168,7 +11266,6 @@ Caused by:
 							
 							; perl - perl's a little shorter tho
 							"$a and $b and $c and $d"
-							
 						</code></div>
 					</li>
 					<li>Complicates escaping in pasted text and generated code. 
@@ -11183,7 +11280,7 @@ Caused by:
 						Some may argue this separates presentation from data, but thats not correct. 
 						It only separates related code, which isn't good.
 						
-						<div><code>
+						<div class="codeBox"><code>
 							; for example
 							templateA = fn int[a b]:
 								ret ''.cat[a" and "b]
@@ -11200,32 +11297,32 @@ Caused by:
 			</li>
 			
 		
-			<li title="Observing objects and the observer pattern">
+			<li sectionTitle="Observing objects and the observer pattern">
 				Lima's <code>change</code> and <code>dif</code> functions allows you to easily observe objects in an event-driven way
 				
-				<div><code>
-				    var x = 3
-				    change[x]:
-                        wout['x changed to:'x]
-                        
-                    x = 4 ; 'x changed to : 4' is printed
-                    
-                    var y = {1 2 3}
-                    change[y:oldy]:
-                        var d = dif[oldy y]
-                        if d.set != nil:
-                            wout['y was set to a different object']
-                        df d.elements v:
-                            if v.type == 'add':
-                                wout['y got a new element: 'v.val]
-                             v.type === 'move':
-                                wout['y got shuffled around']
-                             v.type === 'remove':
-                                wout['y lost an element to the war :(']
+				<div class="codeBox"><code>
+					var x = 3
+					change[x]:
+					    wout['x changed to:'x]
+					    
+					x = 4 ; 'x changed to : 4' is printed
+					
+					var y = {1 2 3}
+					change[y:oldy]:
+					    var d = dif[oldy y]
+					    if d.set != nil:
+					        wout['y was set to a different object']
+					    df d.elements v:
+					        if v.type == 'add':
+					            wout['y got a new element: 'v.val]
+					         v.type === 'move':
+					            wout['y got shuffled around']
+					         v.type === 'remove':
+					            wout['y lost an element to the war :(']
 				</code></div>
 			</li>
 			
-			<li title="How to force a statement's inputs to be lazily evaluated?">
+			<li sectionTitle="How to force a statement's inputs to be lazily evaluated?">
 				<p>	The attributes <span class=future></span> and <span class=ready></span> allow a programmer to specify how 
 						external output may be grabbed before it's used. 
 					But for statements without this attributes, the optimizer can choose whether to grab a file lazily or not
@@ -11236,10 +11333,10 @@ Caused by:
 				</p>
 			</li>
 			
-			<li title="Using a macro to modify code">
+			<li sectionTitle="Using a macro to modify code">
 				<p>	A useful use of macro functionality is to modify normal syntax to mean something not-so-normal.
 					For example, a macro could be defined such that this:
-					<div><code>
+					<div class="codeBox"><code>
 						atomicAssignment [
 							a = getFromServer['a']
 							b = getFromServer['b']
@@ -11251,7 +11348,7 @@ Caused by:
 					
 					is transformed into:
 					
-					<div><code>
+					<div class="codeBox"><code>
 						var temp_a = getFromServer['a']
 						var temp_b = getFromServer['b']
 						var temp_c = getFromServer['c']
@@ -11274,13 +11371,13 @@ Caused by:
 				
 			</li>
 			
-			<li title="C pointers vs Lima pointers">
+			<li sectionTitle="C pointers vs Lima pointers">
 				The placement of the * and & symbols in C are not very intuitive, 
 					and force the reader to mentally parse a group of very similar looking syntax into very different semantics
 					(values vs addresses). 
 				Lima's pointer syntax aims to reduce this cognitive load.
 				As an (imperfect) quantatitive measure, we can count the number of "weird" symbols in this set of statements:
-				<div><code>	
+				<div class="codeBox"><code>
 					;   C         	Lima
 					int a=5			int a = 5
 					int *p, *p2    	ref.int[p p2]
@@ -11310,7 +11407,7 @@ Caused by:
 				And higher level pointers are very rare.
 			</li>
 			
-			<li title="Creating a sparse matrix">
+			<li sectionTitle="Creating a sparse matrix">
 				<p>	<code>
 					var sparseMatrix = {
 						private var internal = {}
@@ -11326,16 +11423,16 @@ Caused by:
 				
 			</li>
 			
-			<li title="How do you control aspect ratio?">
+			<li sectionTitle="How do you control aspect ratio?">
 				Warp the objects in your scene if you want to change the aspect ratio of the whole scene.
 			</li>
 			
 			
-			<li title="Emulating switch statement fallthrough in Lima">
+			<li sectionTitle="Emulating switch statement fallthrough in Lima">
 				<p>	In languages like C, a switch statement allows what's known as "fallthrough" where the statements under a 'case' continue onto 
 						the statements in the next 'case' unless you 'break' out of that case. 
 					Here's an example in C:
-					<div><code>
+					<div class="codeBox"><code>
 					switch( someValue ) {
 					 case 1: printf("One");
 					 		 break;
@@ -11359,26 +11456,26 @@ Caused by:
 				<p>	Lima doesn't have fallthrough, but there are a couple ways to write the same behavior in more readible ways.
 					This Lima code does the same thing as the C code above, use the <span class=cond></span> statement:
 					
-					<div><code>
-					cond fn[x: ret someValue==x]
-					  1:	wout['One']
-					 
-					  ;....
-					 
-					  else: cond fn[x: ret x.has[someValue]]
-					   {20 21 22 23}: 
-                        if someValue == 20: wout['Twenty']	; only print 'Twenty' if the value is 20
-						wout['Twenty-three']				; print 'Twenty-three' for all four values			
+					<div class="codeBox"><code>
+						cond fn[x: ret someValue==x]
+						  1:	wout['One']
+						 
+						  ;....
+						 
+						  else: cond fn[x: ret x.has[someValue]]
+						   {20 21 22 23}:
+						    if someValue == 20: wout['Twenty']	; only print 'Twenty' if the value is 20
+							wout['Twenty-three']				; print 'Twenty-three' for all four values
 					</code></div>
 				</p>
 			</li>
 			
-			<li title="How to use 'future', 'ready', and 'thread'">
+			<li sectionTitle="How to use 'future', 'ready', and 'thread'">
 			
 				Here are four very similar examples that show how using threads and the attributes 
 					<span class=future></span> and <span class=ready></span> affect program flow.
 				
-				<div><code>
+				<div class="codeBox"><code>
 					; the order of grabbing those files is potentially asynchronous (order doesn't matter), 
 						; so they can all potentially be grabbed at once	
 					; however output is assumed to be sequential (order matters) so this will always output 
@@ -11398,7 +11495,7 @@ Caused by:
 						tcp.connect[adr[host 80] 'httpText["utf-8"]'].send['GET 'file' HTTP/1.0'@ @].len	
 						
 					main:
-						frac startTime = time[]	; time in seconds
+						real startTime = time[]	; time in seconds
 						var lengths = {}
 						df {"A.txt" "B.pdf" "C.html"} file:
 							lengths[file] = getLength['www.w3.org' file]
@@ -11407,7 +11504,7 @@ Caused by:
 							wout[file': 'length' - at: 'time[]-startTime' seconds'@]
 				</code></div>
 				<br><br><br>
-				<div><code>				
+				<div class="codeBox"><code>
 					; input is asynchronous here again, the default		
 					; since output is also asynchronous between threads (obviously), its sequential per thread, 
 						;  the lengths will be printed as those files come in
@@ -11431,7 +11528,7 @@ Caused by:
 							thread: wout[file': 'length' - at: 'time[]-startTime' seconds'@]
 				</code></div>
 				<br><br><br>
-				<div><code>	
+				<div class="codeBox"><code>
 					; input now waits on the last input to complete, meaning that those files are pulled in synchronous order
 					; even tho output is running in separate threads, the output is forced to be sequential (A.txt first, B.pdf second, and C.html third)
 					; This way will definitely be slower since the files can't download in parallel
@@ -11455,7 +11552,7 @@ Caused by:
 							thread: wout[file': 'length@]
 				</code></div>
 				<br><br><br>	
-				<div><code>	
+				<div class="codeBox"><code>
 					; the input is now marked 'ready' and so is ready whenever the system wants to get it - at best (and in this case) 
 						; that means compile-time
 					; the output is still asynchronous, but it wouldn't matter if it wasn't - the running time and output would be the same
@@ -11483,7 +11580,7 @@ Caused by:
 			
 			
 			
-			<li title="Why Lima doesn't need devDependencies and optionalDependencies">
+			<li sectionTitle="Why Lima doesn't need devDependencies and optionalDependencies">
 			    <p> In node.js, npm's package.json has devDependencies and optionalDependencies. 
 			        In lime (lima's package manger), devDependencies aren't needed because those can simply be put in the "ignore" list
                         so as to not be published at all.   
@@ -11495,29 +11592,29 @@ Caused by:
                 </p>
 			</li>
 			
-			<li title="Why does Lima allow overriding of the behavior of the 'exit' function?">
+			<li sectionTitle="Why does Lima allow overriding of the behavior of the 'exit' function?">
 			    <p> Program exit should always be under the full control of the top-level module.
                     Dependencies of a module shouldn't be allowed to hijack the program by killing it without going through
                         proper error handling channels first.
 					Therefore, the main program is allowed to change the <code>exitFn</code> attribute's bound value so
 						other code won't directly exit the program.
 					This can be used to capture the exit call and handle it appropriately. For example:
-					<div><code>
+					<div class="codeBox"><code>
 						var exitHandler = fn code:
-				        	wout['Exit called within ShraffersExternalModule with code: 'code]
-				    	exitFn.as[exitHandler]:
+							wout['Exit called within ShraffersExternalModule with code: 'code]
+						exitFn.as[exitHandler]:
 							ShraffersExternalModule.dangerousCall[]
 					</code></div>
                 </p>
 			</li>
 
-			<li title="How to implement back-pressure in Lima?">
+			<li sectionTitle="How to implement back-pressure in Lima?">
 			    <p> So since Lima uses lists for a range of things (strings, arrays, streams, generatorss, etc), one question
 						would be whether back-pressure can be implemented in Lima. The answer is yes. All you have to do is have some external
 						condition for halting the output of a list until that external condition changes.
 					Here's an example:
 
-					<div><code>
+					<div class="codeBox"><code>
 						; example forthcoming - Count the number of bytes that have been sent over the network for a file/stream
 						var input = tcp.connect[adr[128.123.43.0] 'utf8']
 						var output = tcp.connect[adr[128.123.43.1] 'utf8']
@@ -11542,11 +11639,11 @@ Caused by:
                 </p>
 			</li>
 
-			<li title="Using modules as singletons or global value stores">
+			<li sectionTitle="Using modules as singletons or global value stores">
 			    <p> Lima modules declared in the normal way are copies - modifying those copies won't affects anyone else
 						using that module.
 					For example, let's say you have the module:
-					<div><code>
+					<div class="codeBox"><code>
 						; xModule
 						var x = 5
 						var getX = fn: ret x
@@ -11554,7 +11651,7 @@ Caused by:
 
 					<p>If you use it like this in module A:</p>
 
-					<div><code>
+					<div class="codeBox"><code>
 						; module A
 						use['xModule']
 						xModule.x = 40
@@ -11563,7 +11660,7 @@ Caused by:
 
 					<p>And then if module B uses xModule, it won't see those changes:</p>
 
-					<div><code>
+					<div class="codeBox"><code>
 						; module B
 						use['xModule']
 						xModule.getX[]  ; outputs 5, not 40
@@ -11572,13 +11669,13 @@ Caused by:
 					<p>This is different from things like node.js where, because variables are all references, changes would be seen.
 					Even if module A up there set a reference to xModule, it couldn't modify the contents module B would see:</p>
 
-					<div><code>
+					<div class="codeBox"><code>
 						; module A
 						private var xModule ~> load['xModule']
 						xModule.x = 40
 						xModule.getX[]  ; outputs 40
 					</code></div>
-					<div><code>
+					<div class="codeBox"><code>
 						; module B
 						private var xModule ~> load['xModule']
 						xModule.getX[]  ; outputs 5, not 40
@@ -11588,7 +11685,7 @@ Caused by:
 						your dependencies unexpectedly interfering with eachother.
 					If you want to see changes across modules, you can create a reference within xModule:</p>
 
-					<div><code>
+					<div class="codeBox"><code>
 						var x ~> 5
 						var getX = fn: ret x
 					</code></div>
@@ -11600,7 +11697,7 @@ Caused by:
 						modify the dependency module (setting some global state).
 					This can be done by doing something like this:</p>
 
-					<div><code>
+					<div class="codeBox"><code>
 						; xModule
 						private var x ~> nil
 
@@ -11624,32 +11721,32 @@ Caused by:
 
 
 			
-			<li title="Covariance and Contravariance">
+			<li sectionTitle="Covariance and Contravariance">
 			    <p> Languages like Java disallow certain types of equivalencies with generics.
 			        For example, 			        
-			        <div><code>
-			            List&lt;Number> a = [];
-                        List&lt;Integer> b = a;  // fails because a Number might not always be an Integer
+			        <div class="codeBox"><code>
+						List&lt;Number> a = [];
+						List&lt;Integer> b = a;  // fails because a Number might not always be an Integer
 			        </code></div>
                 </p>
 			    <p> In Lima, this isn't usually a problem.
                     An exception would be thrown only if an incorrect value actually gets set on the list:
-			        <div><code>
-			            list[real] w = {1 2 3}
-			            list[int] x = w        ; this is totally fine
-			            
-                        list[real] y = {1.2 3.4}
-			            list[int] z = y        ; this throws an exception because y does not only contain ints
+			        <div class="codeBox"><code>
+						list[real] w = {1 2 3}
+						list[int] x = w        ; this is totally fine
+						
+						list[real] y = {1.2 3.4}
+						list[int] z = y        ; this throws an exception because y does not only contain ints
 			        </code></div>
                 </p>
 			    <p> However, this can lead to some confusing cases, like if you want to write to a list of supertypes
 						when the object passed in is a list of subtypes:
-			        <div><code>
+			        <div class="codeBox"><code>
 						var add4point4 = fn list[real] x:
 							x.=ins[4.4]
 
-			            list[int] w = {1 2 3}
-			            add4point4[w]      ; throws an exception because 4.4 can't be added to w which is a list of ints
+						list[int] w = {1 2 3}
+						add4point4[w]      ; throws an exception because 4.4 can't be added to w which is a list of ints
 			        </code></div>
                 </p>
 				<p> If you would like to add more type information about a variable that could be used to catch errors like this
@@ -11658,12 +11755,12 @@ Caused by:
 			</li>
 
 			
-			<li title="Demonstrating the power of lima's map, group, and slice operators">
+			<li sectionTitle="Demonstrating the power of lima's map, group, and slice operators">
 				<p>	Tho some of these things would be better to be done in more than one line, 
 						this demonstrates how Lima uses some basic constructs to describle an infinity of possibilities.
 					Going through the equivalents for <a href="http://php.net/manual/en/ref.array.php">PHP's associative array functions</a>:
 				</p>
-				<div><code>
+				<div class="codeBox"><code>
 					; array_change_key_case(input, CASE_UPPER)
 					input.map[k.upper v]
 					
@@ -11984,8 +12081,8 @@ Caused by:
 				</code></div>
 			</li>
 			
-			<li title="Lima vs Haskell">
-				<div><code>
+			<li sectionTitle="Lima vs Haskell">
+				<div class="codeBox"><code>
 					; intersperse '.' "MONKEY" 
 					; intersperse 0 [1,2,3,4,5,6]  
 					"MONKEY".join[a.cat['.' b]] 
@@ -12199,12 +12296,12 @@ Caused by:
 				</code></div>
 			</li>
 			
-			<li title="Demonstrating the power of lima's list operations vs python itertools">
+			<li sectionTitle="Demonstrating the power of lima's list operations vs python itertools">
 				<p>	Tho some of these things would be better to be done in more than one line, 
 						this demonstrates how Lima uses some basic constructs to describle an infinity of possibilities.
 					Going through the equivalents for <a href="http://docs.python.org/2/library/itertools.html">Python's itertools library functions</a>:
 				</p>
-				<div><code>
+				<div class="codeBox"><code>
 					; count(10, 2)
 					(10..00)[[v%2==0]]
 					
@@ -12261,12 +12358,12 @@ Caused by:
 			
 			
 			
-			<li title="An example of Lima's terseness vs python">
+			<li sectionTitle="An example of Lima's terseness vs python">
 				<p>	A program that simple takes each line and creates a new file where each line is labeled with line numbers.
 				</p>
 				
 				<h4>Python</h4>
-				<div><code>
+				<div class="codeBox"><code>
 					out = open('uid list'+str(absoluteCount)+'.txt','w')
 					with open('mif_retarget_fbid_12_12_11.csv','r',encoding='utf-8') as f:
 					    for line in f:
@@ -12279,7 +12376,7 @@ Caused by:
 				</code></div>
 				
 				<h4>Lima</h4>
-				<div><code>
+				<div class="codeBox"><code>
 					var input = file['mif_retarget_fbid_12_12_11.csv' 'utf-8']					
 					df input.split[''@] line n: 
 					   file['uid list' n/&#173;/50000+1 '.txt' 'utf-8'].=cat[ "Line " n+1 ": '"line"'"@]
@@ -12293,13 +12390,13 @@ Caused by:
 				</p>
 			</li>
 			
-			<li title="Lima's concurrency vs Lua's concurrency">
+			<li sectionTitle="Lima's concurrency vs Lua's concurrency">
 				
 				Taking an example, from lua's manual:
 				
 				<h4>Lua</h4>
 				
-				<div><code>
+				<div class="codeBox"><code>
 					function downloadAndPrintLength (host, file)
 					  local c = assert(socket.connect(host, 80))
 					  local count = 0    -- counts number of bytes read
@@ -12365,7 +12462,7 @@ Caused by:
 				
 				<h4>Lima</h4>
 				
-				<div><code>
+				<div class="codeBox"><code>
 					downloadAndPrintLength = fn host file:
 						var c = tcp.connect[adr[host 80] 'httpText["utf-8"]']
 						c.send['GET 'file' HTTP/1.0'@ @]	; sending a request
@@ -12390,7 +12487,7 @@ Caused by:
 				</p>
 			</li>
 				
-			<li title="Default function parameters defined recursively">
+			<li sectionTitle="Default function parameters defined recursively">
 				<code>
 					fn functionName
 					 int[a b]: 
@@ -12401,8 +12498,8 @@ Caused by:
 				</code>
 			</li>
 			
-			<li title="How to strip whitespace (or other things)">
-				<code>
+			<li sectionTitle="How to strip whitespace (or other things)">
+				<div class="codeBox">
 					; right stripping spaces and extended spaces
 					var rstrip = fn aString:
 						var str = aString
@@ -12416,13 +12513,13 @@ Caused by:
 					; left strip
 					var lstrip = fn aString:
 						ret rstrip[aString.sort[-k]]	; right strip the reversed string
-				</code>
+				</div>
 				<div>This pattern can be used to strip any type of characters.
 				</div>
 			</li>			
 		
 			
-			<li title="Additional reading">
+			<li sectionTitle="Additional reading">
 				<h5>Encoding issues</h5>
 				<ul><li><a href="The Secret Life of Unicode.pdf">Explanation of unicode's shortcommings</a></li>
 					<li><a href="r6116.pdf">Explains a way to encode more conscicely than Unicode</a></li>
@@ -12434,7 +12531,7 @@ Caused by:
 
 	</div>
 	
-	<div class="mainBox mainTitle" title="Comments">
+	<div class="mainBox mainTitle" sectionTitle="Comments">
 	
 		<div class="whitebox">
 			Name: <input id="name"><br>
@@ -12481,10 +12578,11 @@ Caused by:
 		</script>
 	</div>
 	
-	<div class="mainBox mainTitle" title="Things to mention somewhere">
-		<code pretty="no">
+	<div class="mainBox mainTitle" sectionTitle="Things to mention somewhere">
+		<div class="codeBox" pretty="no">
 
-		Maybe rename frac to real
+		Maybe remove the main function and allow multiple entrypoints by calling methods in the resulting module.
+			This would requiring having some way to access the console args and signals as module-scope variables.
 
 		What happens when you have an accessor object and want to directly access it within the object:
 
@@ -12497,23 +12595,26 @@ Caused by:
 				ret a+5 ; or here?
 		}
 
-		Chang map's implicit variable c to n (for index)
 
-		Make cond have an implicit variable v. Probably also write some conventions about implicit variable somewhere (a, b, k, v, n, ak, and bk)
-
-		Maybe make a typecond macro that matches types (that then can be used during static analysis), or maybe just use cond:
-
-		cond typematch[x
-
-        In javascript, exceptions will probably need to be creatively used to make jump work correctly in longjump situations.
-
-        Attributes are easy to implement until you need to consider asynchronous behavior. Without asynchronous behavior, an attribute could be a simple global variable that's set at the start, and its original value replaced at the end. However, in any place where an asynchronous continuation might start, a pointer to what the attribute currently points to must be made and that attribute reset in thread-local global scope at the start of that thread.
+		Write a concept about dependency injection using attributes.
 
         The meta properties need to have multiple scopes - one for each inherited object.
         Question: should you be able to modify those scopes in lima? Probably not.
         If not, mix must be a core macro because it needs to create those scopes.
 
 		Maybe make macro the same as rawMacro
+
+		change object 'static' to 'block' or something..
+
+		Think about what `this` should do in an object definition space. Should it access the object containing the function its being run in? If so, maybe have self['prop'] to access own properties while you're building the object.
+
+		Maybe pull in the number formatting from future into a standard number formatting module
+
+		== Conventions ==
+
+		! as the interface operator
+
+		Write conventions about implicit variable somewhere (a, b, k, v, c, ak, and bk). Probably add a conventions section.
 
         == How will types work? ==
 
@@ -12526,7 +12627,6 @@ Caused by:
 		When a variable is set or when a variable is returned from a function, the value's type is checked.
 		When a variable is passed into a function as an argument, the function's dispatch list has type checking
 			functions that check the arguments to see which dispatch list matches.
-
 
         == weak dispatch operator binding ==
 
@@ -12555,6 +12655,16 @@ Caused by:
         if a!=b:
           wout["yup they're not equal"]
 
+
+		If two weak operators clash, rather than erroring, choose the left operand and use its dispatch.
+
+		You might have to treat any operator dispatch items with only var or var? types as weak dispatch. Otherwise you might have clashing operators a lot unless they're typed.
+
+		Maybe attempt to make a determination about whether one parameter dispatch list is a strict supertype (subset) of another, and if you can determine that use the one that's the supertype (because its more specific).
+
+		= fallback operator (else) =
+
+		Maybe just have it return an object to delegate to. That way you can either delegate to another existing object, or you can create a new object (with the appropriate operator) and return that new object.
 
 		== variance ==
 
@@ -12601,105 +12711,19 @@ Caused by:
 			otherwise just treat it as a var type for the purposes of static type analysis.
 		Lima won't have the ability to always be 100% type safe.
 
-		== :: syntax ==
 
-		There's a couple problem with requiring a type for privileged members and requiring no type for non-privileged members:
-		* You can't then type check non-privileged members
-		* There isn't a distinguishable difference between setting a new non-privileged member and initializing an inherited privileged member
+		In the variance debate, stanza takes the stand that covariance is the usual use case (reading) and that the type-checker won't yell about contravariance until a case of writing to an array of the wrong type actually occurs. Perhaps Lima should assume covariance unless the parameter is tagged with the writeonly type.
 
-		To resolve this ^, maybe we can allow name in {name:value} to actually stand for a string, and then introduce the syntax :: to use variables as keys for non-privileged members:
-
-		var a=1
-		{a: 5, a::1} // same as {'a':5, 1:1}
-
-		Since setting keys with variables is a lesser use-case, whatever annoyance :: causes would be minimal. Then we can go back to = being used for privileged members AND match more closely with javascript semantics.
-
-		If you do this, reverse the order of the _ variable {name:_} instead of {_:variable}
-
-		== interface-locked objects ==
-
-		interface-locked objects - have a way to lock an object into a particular interface, so that even if that object has additional functionality, it can't be accessed through the interface-locked reference. This is so you can ensure strict adherance to interfaces (like you're forced to in java). Example:
-
-		var x = {
-		  var[a = 5  b = 10]
-		}
-		var interface = {var a}
-
-		var lockedX = interface.lock[x]
-
-		lockedX.a ; 5
-		lockedX.b ; error
-		lockedX.a = 8
-		x.a ; 8
-
-		This could be called 'downcast' (vs a normal cast which is an upcast)
-
-		== how do you specify a function's return value? ==
-
-		Probably actually want to standardize here:
-
-
-		fn!                        ; just a function (something with a bracket operator)
-		fn&[]                      ; a function that returns nil
-		fn&[int]                   ; a function that returns an int
-		fn&[int: string int]       ; a function that returns an int and takes a string and int
-		fn&[int: string, int string, int int]   ; a function that returns an int and takes either a
-		                           			    ;  string, an int and a string, or two ints
-		fn[a: b:]!                 ; fn type with names
-		fn[string a: int b:]!      ; fn type with names and types
-		fn&[int]&fn[a:]!           ; fn type with return type and parameter name
-
-		maybe allow fn&[]! etc just for symmetry with fn! and fn[..]!
-
-		And you should be able to do this:
-
-		var ts = {int string}~
-		fn&[int: ts...]
-		var namedTs = {{string~ 'a'} {int~ 'b' string~ 'c'}}
-		fn.paramType[namedTs] ; same as fn[string a: int b string c:]!
-		fn.paramType[{{string~} {int~ string~}}] ; same as fn&[string, int string]
-
-		var x = fn a: ret 3
-		x! 					       ; keep interface type like this
-
-
-		== rethinking generics ==
-
-		Would it be possible to have capture types from parameters in Lima? Eg:
-
-		int x = 5
-		frac y = 3.4
-		var f = fn list[?] x ? y:
-		   x.=ins[y]
-		fn![getType[a]][a:] = fn a:
-		  ret
-
-		Could use a macro:
-		fn ptype[T list[T] x T y]:
-		  x.=ins[y]
-
-		ptype T:
-		  fn![T] x = fn T a T b:
-			 ret a+b
-
-		Except how does it then know what T will be? Maybe you can grab the type off any object:
-
-		fn! x = fn a b:
-			assert[meta[a].type.values.has[b] & meta[b].type.values.has[a]]
-			var result = a+b
-			assert[meta[a].type.values.has[result]
-
-		However, this won't affect dispatch.. maybe you need a way to relate types within dispatch.
-
-		type.cond[meta[a].type.values.has[b]
-
-		== other ==
-
-        Have a way to bind an attribute for a whole module (rather than just setting for a particular call-stack).
-
+		== implementation thoughts ==
 
         All the operator overloading stuff is probably implementable via meta, and so are all types probably.
         Throw and while can probably be implemented with jump
+
+		In javascript, exceptions will probably need to be creatively used to make jump work correctly in longjump situations.
+
+        Attributes are easy to implement until you need to consider asynchronous behavior. Without asynchronous behavior, an attribute could be a simple global variable that's set at the start, and its original value replaced at the end. However, in any place where an asynchronous continuation might start, a pointer to what the attribute currently points to must be made and that attribute reset in thread-local global scope at the start of that thread.
+
+		== other ==
 
 		* move 'change' back to being a standard macro, and mention that it's implemented using macro[o].history
 
@@ -12722,13 +12746,32 @@ Caused by:
 		* source map
 		* exception messages - anything from an exception that's not switched off of but instead printed out to the screen. Messages sent to a server could process the messsages using the dev bundle.
 
-		Make a similar note about var in lima as the ? type in stanza: http://lbstanza.org/optional_typing.html where var needs to be both a subclass of everything *and* a superclass of everything.
-
-
-		In the variance debate, stanza takes the stand that covariance is the usual use case (reading) and that the type-checker won't yell about contravariance until a case of writing to an array of the wrong type actually occurs. Perhaps Lima should assume covariance unless the parameter is tagged with the writeonly type.
-
 		Maybe extend cast to somehow work on all types. Cast would constrain the type of an object to something, so it could be set to a variable with a more constrained type. (see cast in stanza)
 
+
+		== var might need to be a superclass type of everything ==
+
+		In stanza, var is both a subclass of everything and a superclass of everything (maybe? they say so here:
+		http://lbstanza.org/optional_typing.html). In lima, it depends on whether or not we want this case to be caught by a
+		type-checker or not:
+
+		var x = fn writeonly list[var] a:
+			a.=ins['hi]
+
+		list[int] alist = {1 2 3}
+		x[alist] ; this will/can be caught by a static typechecker even if alist's elements can't be determined at compile-
+		time
+
+		It seems like maybe we would want var to be a subclass and superclass of everything (except nil).
+
+		There's actually a more important reason to do this. If you want to do optional typing that makes it easy to
+			incrementally add types, you need to be able to pass in a typed variable into a function that expects a var:
+
+		var f = fn var a:
+			doSomething[a]
+
+		int x
+		f[x] ; this shouldn't get stopped by a type checker
 
 		== make ==
 		* partial implementation of make (missing some necessary things - can't remember what at the moment: unmake?)
@@ -12760,11 +12803,13 @@ Caused by:
 				callback[x]
 				ret x
 
+
+		Maybe get rid of the 'flo' type.
    		
-		</code>
+		</code></div>
 	</div>
 	
-	Last Updated: 2017-02-05
+	Last Updated: 2018-09-03
 	<script type="text/javascript">
 		
 		function in_array(needle, haystack, argStrict)
@@ -13039,13 +13084,13 @@ Caused by:
 			
 			try {
 			var createTitleList = function(node, parentNode) {
-				var name = node.attr("title");
+				var name = node.attr("sectionTitle");
 				var liNode = $("<li><div class='contentsButton' value='"+name+"'>"+name+"</div></li>");
 				
 				var contentsButtons = liNode.find('.contentsButton');
 				
 				contentsButtons.click(function() {
-					var theNode = $('div[title="'+name+'"]');	// its fucked up that I can't just use the node thats passed in the upper scope - wtf is going on?
+					var theNode = $('div[sectionTitle="'+name+'"]');	// its really annoying that I can't just use the node that's passed in the upper scope - wtf is going on?
 					if(theNode.is(":visible")) {
 						var topOffset = theNode.offset().top;	
 					} else {
@@ -13129,11 +13174,29 @@ Caused by:
 				});
 				
 			});
-			
+
 			function createCodeArea()
 			{	$(this).html("<div"+/*" class=codeArea" +*/"><code>"+$(this).html()+"</code></div>");
 				$(this).addClass("unbreakable").addClass("codeArea");
 			}
+
+			$("code").each(function() {
+			    var parent = $(this).parent()
+				var parentIsExampleOrCodebox = parent.hasClass('example') || parent.hasClass('codeBox')
+				// var closestTable = $(this).closest("table")
+				// var isFirstRowOfDefinitionTable = closestTable.hasClass('definitionTable')
+				// 								  && $($(closestTable.children()[0]).children()[0])
+			    if(!parentIsExampleOrCodebox) {
+			        $(this).addClass("codeBox");
+				}
+			})
+			$("div.codeBox").each(function() {
+			    var codeOpener = '<code>'
+			    if($(this).attr('pretty') === 'no') {
+			     	codeOpener = '<code pretty="no">'
+				}
+			    $(this).html(codeOpener+$(this).html()+"</code>")
+			})
 			
 			$(	".definitionTable tr td:first-child, "+
 				".methodDefinitionTable tr td:first-child, "+
@@ -13187,7 +13250,6 @@ Caused by:
 				return result;
 			}
 			
-			
 			$("code").each(function()
 			{	var minIndent = findMinIndentForCodeSpace($(this).html());
 				
@@ -13235,7 +13297,7 @@ Caused by:
 				return realWord;
 			}
 			
-			$(".subBox2").each(function(){	$(this).prepend("<h4>"+$(this).attr("title")+"</h4>");});	// titles
+			$(".subBox2").each(function(){	$(this).prepend("<h4>"+$(this).attr("sectionTitle")+"</h4>");});	// titles
 			
 			
 			
@@ -13262,9 +13324,10 @@ Caused by:
 			
 			//* An attempt to make the headings collapsable
 			
-			$(".mainBox.mainTitle").each(function(){	setupCollapsable($(this), "h2", $(this).attr("title")); });
-			$(".subBox1").each(function(){	setupCollapsable($(this), "h3", $(this).attr("title"));});
-			
+			$(".mainBox.mainTitle").each(function(){	setupCollapsable($(this), "h2", $(this).attr("sectionTitle")); });
+			$(".subBox1").each(function(){	setupCollapsable($(this), "h3", $(this).attr("sectionTitle"));});
+
+
 			$(".example").each(function(){	
 				setupCollapsable($(this), undefined, 'examples', $(this).hasClass('open'));
 				$(this).addClass("codeBox");	
@@ -13279,7 +13342,7 @@ Caused by:
 			});
 			
 			
-			$('.mainBox[title="Concepts"] li').each(function(){	setupCollapsable($(this), 'h3', $(this).attr("title"), false, 'div');});
+			$('.mainBox[sectionTitle="Concepts"] li').each(function(){	setupCollapsable($(this), 'h3', $(this).attr("sectionTitle"), false, 'div');});
 			
 			
 			$("#openAll").click(function()

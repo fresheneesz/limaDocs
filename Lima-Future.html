@@ -851,7 +851,69 @@
 		</p>
 		
 	</div>
-	
+
+	<div class="subBox1" title="Number Formating">
+
+		<h5>Should be factored into functions or maybe a number wrapper object:</h5>
+		<table class="definitionTable innerBorder">
+
+			<tr><td>sci</td>
+				<td>This <span class=pseudoMember></span> returns the number as a scientific notation string (e.g. '4.334*10^6')
+				</td>
+			</tr>
+			<tr><td>engr</td>
+				<td>This <span class=pseudoMember></span> returns the number as an engineering notation string.
+					Uses the character 'e' to represent base-10 exponentiation (e.g. '4.334e6').
+				</td>
+			</tr>
+			<tr><td>roman</td>
+				<td>This <span class=pseudoMember></span> returns the number as a roman numeral string.
+				</td>
+			</tr>
+			<tr><td>english</td>
+				<td>This <span class=pseudoMember></span> returns the number as a plain english string.
+				</td>
+			</tr>
+			<tr><td>engOrdinal</td>
+				<td>This <span class=pseudoMember></span> returns the number as an english ordinal string.
+				</td>
+			</tr>
+
+		</table>
+
+		<h5>Methods:</h5>
+		<table class="methodDefinitionTable innerBorder">
+
+			<tr><td>sep</td>
+				<td>num character</td>
+				<td>Returns the number modified so that its string representation has separaters every <code>num</code> digits.
+					<code>character</code> is optional, but if included sets the separater character. The default character is a comma.
+					For example: <code>wout 1000000.sep[3]</code> would print <code>1,000,000</code> and <code>wout 11110001.sep[4 "'"]</code> would print <code>1111'0001</code>.
+				</td>
+			</tr>
+			<tr><td>base</td>
+				<td>num</td>
+				<td>Returns the number modified so that its string representation is in base <code>num</code>.
+					For example, <code>wout 7.base[2]</code> prints <code>111</code>
+				</td>
+			</tr>
+			<tr><td>places</td>
+				<td>num</td>
+				<td>Returns the number modified so that its string representation has a maximum of <code>num</code> decimal places.
+				</td>
+			</tr>
+			<tr><td>fpad</td>
+				<td>num</td>
+				<td>"Front padding". Returns the number modified so that its string representation has at least <code>num</code> digits, padded with 0s if neccessary.
+				</td>
+			</tr>
+			<tr><td>bpad</td>
+				<td>num</td>
+				<td>"Back padding". Returns the number modified so that its string representation has at least <code>num</code> digits, padded with 0s if neccessary.
+				</td>
+			</tr>
+		</table>
+	</div>	
 	
 	<div class="mainBox mainTitle" title="Attributes">
 		
@@ -2352,6 +2414,73 @@
 			 	width: 50
 				height: 100
 			]
+
+
+		Maybe make a typecond macro that matches types (that then can be used during static analysis), or maybe just use cond:
+
+		cond typematch[v]
+			a: ...
+			b: ...
+
+
+        Have a way to bind an attribute for a whole module (rather than just setting for a particular call-stack).
+
+		== interface-locked objects ==
+
+		interface-locked objects - have a way to lock an object into a particular interface, so that even if that object has additional functionality, it can't be accessed through the interface-locked reference. This is so you can ensure strict adherance to interfaces (like you're forced to in java). Example:
+
+		var x = {
+		  var[a = 5  b = 10]
+		}
+		var interface = {var a}
+
+		var lockedX = interface.lock[x]
+
+		lockedX.a ; 5
+		lockedX.b ; error
+		lockedX.a = 8
+		x.a ; 8
+
+		This could be called 'downcast' (vs a normal cast which is an upcast)
+
+
+		== rethinking generics ==
+
+		Would it be possible to have capture types from parameters in Lima? Eg:
+
+		int x = 5
+		frac y = 3.4
+		var f = fn list[?] x ? y:
+		   x.=ins[y]
+		fn![getType[a]][a:] = fn a:
+		  ret
+
+		Could use a macro:
+		fn ptype[T list[T] x T y]:
+		  x.=ins[y]
+
+		ptype T:
+		  fn![T] x = fn T a T b:
+			 ret a+b
+
+		Except how does it then know what T will be? Maybe you can grab the type off any object:
+
+		fn! x = fn a b:
+			assert[meta[a].type.values.has[b] & meta[b].type.values.has[a]]
+			var result = a+b
+			assert[meta[a].type.values.has[result]
+
+		However, this won't affect dispatch.. maybe you need a way to relate types within dispatch.
+
+		type.cond[meta[a].type.values.has[b]
+		
+
+		== debugger UI ==
+
+		Highlight the whole statement that is currently being executed (which might be part of a line or more than one line) *and* the operation/function currently being executed in a different color, so you can easily see where things are at.
+
+
+		== other ==
 
         Maybe allow overriding ~ and ~> if you inherit from a reference: {mix[someRef~]}
 
