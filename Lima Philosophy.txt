@@ -5,7 +5,7 @@
 		* unified formats/interfaces (ie lowest common denominator) and conversions when given system-specific formats
 		* feature querying (asking what the system supports)
 
-* Always use lists instead of iterators, generators, (other?)
+* Always use lists instead of iterators, generators, streams, etc
 * No copy-paste code EVER within the same codebase. If you're duplicating boilerplate code, you're doing it wrong. 
 * String interpolation and string escaping is the wrong way to do things. 
 	Instead use concatentation to extend strings.

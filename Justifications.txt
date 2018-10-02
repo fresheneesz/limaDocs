@@ -38,3 +38,158 @@ I wanted to make basic objects really easy to create, but before the :: operator
 
 This :: operator was created to resolve this. Since setting keys with variables is a lesser use-case, whatever annoyance :: causes would be minimal. Then we can go back to = being used for privileged members AND match more closely with javascript semantics.
 
+
+== operator definition hoisting ==
+
+Operator definitions are hoisted primarily so that `make` can be used anywhere in the object (as long as someon doesn't const it). 
+
+== macro evaluation == 
+
+Problem: Determining when function parameters start and end is made difficult by macros. Examples:
+
+f = fn[
+  x=myMacro 1:a[]  // is x a parameter with the default `myMacro 1`, or is x a variable being set to `myMacro 1:a[]`?
+]
+
+Potential solutions:
+
+A. Surround parameters with specific delimiter characters (eg :param1 param2 param3::)
+   Problems: 
+   * Macros can still decide to consume the parameter-end characters (eg :param1 myMacro 1::2 ::) so you can't know when the parameters end unless the macro is evaluated
+
+B. Split macros into two parts: the number of characters consumed, and the function to evaluate if the macro should be run. This way the character consumption can be evaluated to help determine whether a statement is part of parameters or not.
+   Note: doesn't really solve anything on its own.
+   Problems
+   * If a macro used as a parameter type or parameter default has a character consumption part that mutates outside state, parameter sets that don't end up matching can still mutate that state. This is kind of ok because this can be made known that its the macro writer's responsibility to not change state in the macro's character consumption stage. 
+
+C. A + B
+   Problems:
+   * If a macro is defined inside the function, the characters it will consume can't generally be known until the function starts executing. 
+
+D. B + Evaluate what input is consumed for all macros in a function before any of the function is run.
+   Problems:
+   * Macros defined inside a function couldn't be evaluated inside that function. 
+
+E. B + Only allow macros be defined at the top-level.
+   Problems:
+   * This would be similar to D, except more constraining. Has all of D's problems.
+   * Also, you wouldn't be able to define a macro in a function (potentially closing over upvalues)
+
+F. E + Don't allow macros to have any state (internal state or access to external state)
+   Problems:
+   * Your macros are pretty crippled. It would probably even be a problem to use most libraries.
+
+H. B + Allow macros to be created and passed around anywhere, but evaluate the character consumption of all macros within a given top-level block with whatever macros are in scope at the time of that block's initial execution.
+   Problems:
+   * This would mean macros wouldn't be able to switch character consumption on any in-scope variable. Eg you couldn't do something like: `var a=5  myMacro[a,12345] + whatever`. Maybe this isn't terrible, but it might be pretty constraining (when? realistic use cases?).
+
+G. B + require a function define parameters for each block (at minimum defining no parameters by having a ':' with nothing before them), require that statements be indented further than parameters, and parameters all be indented at the same level. This way, there are one of two possibilities: 
+   1. Each parameter set starts on its own line and contains statements indented further than it
+   2. The function only has one parameter set, which can start on the same line as the `fn` macro identifier, and the entire function body is statements within that single parameter set.
+   Problems: 
+   * Can't define a parameterless function with brackets without an unnecessary-looking dangling colon like `fn[: ret 4]`
+   * Can't define single line functions like `var a = fn[x: ret someMacro 5][]` cause without checking character consumption for someMacro (and ret), you won't know where the function ends
+   * Any construct like this that wants to do any kind of look-ahead will probably have to follow similar indentation rules or use something else in order to ensure its never ambiguous whether a statement should be executed or not.
+
+I. Require macros to take in their entire block
+   Problems
+   * You couldn't do things like: (fn a: ret x)[3]
+   * This just isn't really an option.
+
+J. Ask the programmer. If the compiler can't ensure that it can figure out the character consumption of a macro at runtime, it asks the programmer and it will mark the macro's end-point in the code in some way.
+
+=== After narrowing it down ===
+
+Seems like H and G (along with B) are the best solutions here. J might come in handy as a last resort. Here's some of these thoughts narrowed down and reframed and elaborated on:
+
+Things we might want to do:
+1. Single-line functions
+ Problems:
+ * H supports this.
+   Consider Z:
+	main = fn:
+		f[]
+ 	m = macro rawInput: ret {charsConsumed:2, execute input: wout[input]}
+ 	f = fn[x: m 5]
+	main[]
+  ^ f can be correctly resolved at definition time
+   Also consider Y:
+	doSomethingWithList[{1 2 3}.mapFn[fn[x:x^2]}]
+ * G doesn't support this. 
+   Z would have to be rewritten at least as:
+	main = fn:
+		f[]
+ 	f = fn[x: 
+		m 5
+	]
+ 	m = macro rawInput: ret {charsConsumed:2, execute input: wout[input]}
+	main[]
+   Y would have to be rewritten at least as:
+	doSomethingWithList[{1 2 3}.mapFn[fn[x:
+		x^2
+	]}]
+
+2. Define parameterless functions that *only* contain statements (no parameters and no parameter delimiter like ':')
+ * H supports this.
+   Consider W:
+ 	f = fn[
+		wout['hi']
+		;...
+	]
+ * G doesn't support this.
+   In G, W above would have to be written at least with an extra colon
+ 	f = fn[:
+		wout['hi']
+		;...
+	]
+
+3. Defining a macro inside a function and using it inside that function somewhere.
+ * G supports this.
+   Consider V: 
+	main = fn:
+		m 34
+	m = macro rawInput: ret {charsConsumed:3, execute input: wout[input]}
+   Also consider U:
+	main = fn x:
+		m = macro rawInput: ret {charsConsumed:x, execute input: wout[input]}
+		m 34
+	main[3]
+ * H doesn't support this.
+   V would have to be rewritten: 
+	m = macro rawInput: ret {charsConsumed:3, execute input: wout[input]}
+	main = fn:
+		m 34
+   U would have to be rewritten, here's one way how:
+	m = macro rawInput: ret {charsConsumed:atr.chars, execute input: wout[input]}
+	main = fn:
+		m 34
+	atr[chars=3]:
+		main[]
+
+4. Single-line if statements
+   * H supports this.
+     Consider T:
+	x = getBool[]
+	doSomething[if[x: 4 else: 5]]
+     ^ Also consider: what if 4 were replaced with some kind of macro?
+   * G doesn't support this:
+     T would have to be rewritten:
+	x = getBool[]
+	doSomething[if[
+		x: 4 
+		else: 5
+	]]
+     ^ This would make if no longer a good compact replacement for the ternary operator in other languages bool?4:5
+ 	
+
+Additional solutions:
+
+K. G + require there be something delimiting parameters in a function *first* + allow macros to be defined and used within functions as long as its not on the first line. This supports item 1, 3, and 4 above but not item 2
+    Consider S:
+	fn[mac: mac 34] ; no dice, the macro `mac` can't be used 
+    Consider R:
+        mac = returnsSomeMacro[]
+	fn[mac: mac=someOtherMacr[]  mac 34] 
+
+Maybe K is a reasonable compromise? 
+	

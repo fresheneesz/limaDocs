@@ -2,7 +2,17 @@
 <html lang="en">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	
+
+	<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+	<link rel="manifest" href="icons/site.webmanifest">
+	<link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#5bbad5">
+	<link rel="shortcut icon" href="icons/favicon.ico">
+	<meta name="msapplication-TileColor" content="#da532c">
+	<meta name="msapplication-config" content="icons/browserconfig.xml">
+	<meta name="theme-color" content="#ffffff">
+
 	<link rel="shortcut icon" href="" type="image/x-icon">
 	<title>The Lima Programming Language</title>
 	
@@ -22,7 +32,16 @@
 		#header {
 			max-width:1000px;				
 		}
-		
+
+		.logo {
+			display: flex;
+		}
+		.logo img {
+			margin: auto;
+			margin-top: 15px;
+			height: 100px;
+		}
+
 		.loadingGif {
 			position: fixed;
 			top: 0; left: 0;	
@@ -208,22 +227,22 @@
 	<div class=loadingGif><img src="loading_transparent_4.gif"></div>
 
 	<div id="top"></div>
-		
-		<span id="openAll">Open All Sections</span>  &nbsp;&nbsp;&nbsp;  <span id="closeAll">Close All Sections</span>
-	
+
+	<div class='logo'><img src="limaLogo.png"/></div>
+
+	<span id="openAll">Open All Sections</span>  &nbsp;&nbsp;&nbsp;  <span id="closeAll">Close All Sections</span>
+
 	<div class="mainBox mainTitle" sectionTitle="Introduction">
-		<p> Lima (pronounced like "lima bean") is a high-level optionally-typed platform-independent language.
-		    It allows seamless language extension via fully arbitrary macros, and has the ability to specify expected input
+		<p> Lima <span class="note">(pronounced like "lima bean")</span> is a high-level gradually-typed
+				platform-independent object-oriented language made to be easy (and terse) to write.
+		    It allows seamless language extension via fully-arbitrary macros, and has the ability to specify expected input
 				behavior and intended performance behavior of your program in addition to intended output behavior.
-			Automatic optimization modules
-			The implementation can be found <a href="https://github.com/fresheneesz/lima">on github</a>.
+			Optimizer modules give the programmer much more control over how their program is automatically optimized.
         </p>
-		<p>	Lima is made to be easy (and terse) to write.
+		<p> Lima has a number of uncommon features like transparent pointers (references), rich operator overloading, and concurrent semantics, along with less uncommon features like dynamic dispatch.
 		</p>
-		<p>	Lima is intended to be zero-configuration.
-			Make files or their like aren't needed to compile a single project.
-			Settings that require compiler flags or similar in other languages would be included in the source files themselves
-				- so that there is only one source of truth.
+		<p> The implementation can be found on github at
+			<a href="https://github.com/fresheneesz/lima">https://github.com/fresheneesz/lima</a>.
 		</p>
 		
 		<p>	Without further ado, some code examples:
@@ -236,9 +255,12 @@
 			
 			string lastWords = 'Goodbye World.' ; module variable - similar to, but safer than, global variables
 			y = 5                               ; implicit variable declarations
-			
-			; many operating systems use 'main' as the <span class="entryPoint forceComment"></span> for the program (e.g. Windows)
-			main = fn:
+
+			doSomething[] ; a function call - arbitrary code can be called in a module definition
+
+			; the function called above - note that it is hoisted meaning that it is defined at the top of the scope
+			; no matter where it is in that scope
+			const doSomething = fn:
 				var myVariable         ; Variable declaration
 				myVariable = 'Hello?'  ; Assignment
 				int[x=8 y]             ; declaration and initialization
@@ -279,8 +301,6 @@
 				
 				; Destructuring assignments (x gets cat.legs - the value 4, myvariable gets cat.bam[1] - the value 2)
 				{legs:x bam:{1:myVariable}} = cat
-
-
 			</div>
 		</p>
 		
@@ -380,10 +400,10 @@
 				<li><h5>Prototype-based inheritance</h5>
 					Like Javascript, Smalltalk, and Lua, Lima doesn't distinguish between classes and objects. Any object can
 						inherit from any other object - using that inherited object as its <i>prototype</i>.
-					However, normal inheritance (using <code>mix</code> in Lima is a little more constrained than in
+					However, normal inheritance (using <code>mix</code>) in Lima is a little more constrained than in
 						javascript, where an object's prototype can change its methods on the fly. In Lima, once an object has
 						inherited from its parent, changing the parent won't change the behavior of the inheriting object -
-						tho there are ways of doing that if that's really what you want (eg operator fallback delegation).
+						tho there are ways of doing that if that's really what you want (ie operator fallback delegation).
 				</li>
 				<li><h5>Call-by-reference, Assign-by-value</h5>
 					Most major object-oriented languages call-by-value (aka pass-by-value) and assign-by-value for primitives,
@@ -403,14 +423,26 @@
 						not a faster runtime environment.
 				</li>
 				<li><h5>Concurrent-by-default</h5>
-					Since concurrency is usually an optimization, concurrency is implicit in Lima.
-					Haskell-like lazy evaluation and infinite lists can make Lima far easier to work with than a conventional language.
+					<p> Since concurrency is usually an optimization, Lima has concurrent semantics so that concurrency can be
+							chosen by the compiler (and its optimizer modules) when appropriate.
+						This means that in any circumstance, the order of statements can be changed by the compiler.
+						This does not mean that statements are always or even usually running concurrently.
+						Lazy evaluation and infinite lists (similar to Haskell) can make Lima far easier to work with than a
+							conventional language.
+					</p>
 					<span class="copiedNote inputOrder" style="color:black;">
 						Separate inputs to the program (separate files, different network requests, etc)
 							are treated as order-doesn't-matter by default,
 							meaning that, for example, multiple files will be opened and read out-of-program-order
-							if that is more efficient in some way (speed or memory).
+							if that is more efficient in some way (speed, memory, etc).
 					</span>
+				</li>
+                <li><h5>Unified Compile-time and Run-time</h5>
+					Lima unifies compile-time and run-time so that anything can be run at either time depending on what the
+						programmer wants. There is no separate compile-time "macro language" like there is in C.
+                    In Lima, Lima itself is its own macro language and meta-programming language, and you can allow certain
+						parts of the program to run at compile-time even for external inputs
+						(using the <code>ready</code> attribute).
 				</li>
 				<li><h5>Performance-based logic</h5>
 					Lima has the ability to not only write and use optimizer modules that make your programs run faster,
@@ -422,22 +454,19 @@
 			</ul>
 			
 			And also a couple interesting features:
-			<ul><li><h5>Language Oriented Programming</h5>
+			<ul><li><h5>Language Oriented Programming With Macros</h5>
 					Lima has the ability to define powerful macros that are called with user-defined syntax.
                     This goes beyond ruby DSLs and even lisp DSLs (which are essentially just lists of tokens), and into the realm of
 						real, arbitrarily structured language execution.
 					Lima macros can be a powerful way to extend the language and build domain-specific languages for
-						use inside larger programs.
+						use inside larger programs while still avoiding most of the pitfalls that other macro systems have.
 				</li>
-				<li><h5>Build-in package management</h5>
-					Each source file fully describes its dependencies (with the help of a "package.lima" file), 
-						and can automatically download and use the needed files.
-					That way you never have to manually download and install *any* external package! Ever!
-				</li>
-                <li><h5>Unified Macro language</h5>
-					Lima unifies compile-time and run-time languages, the former often referred to as a "macro language".
-                    In Lima, Lima itself is its own macro language and meta-programming language, and you can allow certain parts of the
-						program to run at compile-time if possible even for external inputs (using the <code>ready</code> attribute).
+				<li><h5>Context Attributes: Explicit Dependency Injection</h5>
+					Lima's context attributes allow the programmer to define a value accessible from an entire call-stack.
+                    This is used to do things like allow a program creator to override how inner modules are allowed to
+                    (or not allowed to) interact with external systems (like OS calls and the network) as well as providing
+                    a simple and explicit way to reduce boiler-plate for values that would otherwise need to be passed very deeply
+                    into nested function calls.
 				</li>
 				<li><h5>Transparent references</h5>
 					<span class="copiedNote references" style="color:black;">
@@ -450,6 +479,11 @@
 							and creating one version of a function for pointers and one for non-pointers 
 							(autoboxing is incompatible with the ideas of pass-by-reference and typeless values).
 					</span>
+				</li>
+				<li><h5>Build-in package management</h5>
+					Each source file fully describes its dependencies (with the help of a "package.lima" file),
+						and can automatically download and use the needed files.
+					That way you never have to manually download and install *any* external package! Ever!
 				</li>
                 <li><h5>Numerical accuracy declarations</h5>
 					Lima allows defining the required numerical accuracy at the point of output of a number (eg printing to
@@ -537,22 +571,12 @@
 		</div>
 		
 		<div class="subBox1" sectionTitle="Program Entry-points">
-		
-			<p>	Most of the time, the <a href="http://en.wikipedia.org/wiki/Entry_point">entry point</a> to the program will be a function called 'main' 
-					(following the convention of C for operating systems that use a single entry-point).
-				However, the entry-point is not necessarily 'main' and some operating systems (like Android) even have multiple program entry points.
+			<p>	Most of the time, operating systems only have one <a href="http://en.wikipedia.org/wiki/Entry_point">entry point</a>.
+				For OSs that have multiple entry-points (like Android), when an entry-point is started, the entry-point module
+					will be built and then the public method with the appropriate name for the required entry-point will be called.
+				In most systems with only one entry point, no specifically named function need be defined.
 			</p>
-			<p>	The entrypoint has the following parameters: 
-				<ol><li>A list of command-line arguments.</li>
-					<li><code>signals</code> - the list of signals sent to the program</li>
-				</ol>
-			
-				<div class="example open"><code>
-                    main = fn {arg1 arg2} signals:
-                        con.out.=cat['Sum: ' arg1+arg2 ''@]
-                        change[signals]:
-                            con.out.=cat["Got a new signal: " signals.sort[-k][0] ''@]
-				</code></div>
+			<p> Note that the arguments given to the program are contained in the <code>process</code> object.
 			</p>
 		</div>
 		
@@ -633,7 +657,7 @@
 				However, many (like if and try) do not define new scopes and thus variables defined within them can be used outside of them.
 				In fact, the only core blocks that create new scopes are <code>df</code>, <code>while</code>, <code>thread</code>, and <code>fn</code>.
 				All the flow-control constructs are detailed in the section <b>Predefined Macros</b>
-					(tho not all things there are neccessarily flow-control).
+					(tho not all things there are necessarily flow-control).
 			</p>
 		</div>
 		
@@ -653,7 +677,7 @@
 						; do something
 				</code></div>
 			</p>
-			<p>	Bracket-delimited blocks work as expected, but whitespace delimited blocks are more forgiving then their python counterparts.
+			<p>	Bracket-delimited blocks work as expected and whitespace delimited blocks are more forgiving then their python counterparts.
 				Here's how they work: 
 				When a block is opened (by a macro name like <code>if</code>),
 					anything that is more indented than the line in which the block is opened is treated as inside the block.
@@ -1202,14 +1226,14 @@
 							Defines the <span class="opsym"></span> based on the <span class=lvalue>function</span>.
 						</p>
 						<p>	Humans process symbols and pictures far faster than words.
-							Similarly, programs that read like an essay can be far harder to read and understand, 
+							Programs that read like an essay can be far harder to read and understand,
 								no matter how language-like they may sound. 
-							This is why nobody likes word-problems in school. 
+							This is one reason that nobody likes word-problems in school.
 							Operator overloading helps us visualize what a statement does far better than a series of function calls could. 
 						</p>
 						<p>	For binary operators defined with one parameter, 
 								the operator is defined the same way when the object is on either side of the operator
-								(note that this doesn't neccessarily mean the operator is commutative).
+								(note that this doesn't necessarily mean the operator is commutative).
 							The parameter represents one operand and the other operand is assumed to be <code>this</code>.
 							
 							<div class=example><code>
@@ -1235,39 +1259,135 @@
 						<p>	The keyword <code>backward</code> indicates that the operator is right-to-left associative (like <code>=</code>). 
 							Operators are left-to-right associative without that keyword.
 						</p>
+
+						<p> The type <code>varWord</code> can be used to capture variable names (both declared and undeclared)
+								in an operator's dispatch.
+							This allows you to do things like specify how the dot operator can operate on the name given
+								and rather than the value that variable holds in scope.
+
+							<div class=example><code>
+								a = {
+									operator[+] = fn this varWord word:
+										var name = meta[word].name
+										this[name] = true
+								}
+
+								var x = 5
+								a+x
+								a['x'] ; holds true now
+							</code></div>
+						</p>
 						
 						<p>	Just like for methods, when an operator is redefined on an object, only that definition is used - 
 								it doesn't retain inherited operator definitions, even if those definitions could handle arguments
 								that the new definition can't handle.
 							Also, operator definitions are always <span class="constant"></span>, so once its defined it can't be redefined.
-							
-							If it is ever ambiguous which object's operator should be used, an exception will be thrown.
-							Ambiguous operator definitions inside the same module will throw an exception as well 
-								(even if they aren't called).
-			
+						</p>
+
+						<p>	Operator assignments are hoisted, like <code>const</code> statements.
+						</p>
+
+						<h4>Dispatch ambiguity and disambiguation</h4>
+						<p> If both operands in a binary operation have relevant dispatches for the operator,
+								an exception will be thrown because the language can't tell which operand to use the operator of.
+
 							<div class=example><code>
-								a = 
-								{	var x = 2
-									operator[+] = fn this b:
-										ret x+2
+								type hasV = {var v}!
+								var a = {
+									var v = 2
+									operator[+] = fn hasV! other:
+										ret other.v + v
 								}
-								b = 
-								{	var x = 5
-									oprator[+] = fn a this:
-										ret x+a-1
+								var b = {
+									var v = 3
+									operator[+] = fn hasV! other:
+										ret other.v - v
 								}
-								
-								var c = a+b ; throws an error because it doesn't know which code to use
-								var d = b+a ; throws an error because neither operator definition can be used
+
+								var c = a+b ; throws an error because the + operator of both operands match
+							</code></div>
+
+							However, if both operands have a matching operator dispatch, if it can be determined that
+								one dispatch list is strictly more specific than (eg a strict subtype of) than the
+								other, that dispatch will be chosen.
+
+							<div class=example><code>
+								type hasV = {var v}!
+								var a = {
+									var v = 2
+									operator[+] = fn hasV! other:
+										ret other.v + v
+								}
+								var b = {
+									var v = 3
+									operator[+] = fn a! other:  ; note the a! here rather than hasV!
+										ret other.v - v
+								}
+
+								var c = a+b ; c gets 1 (rather than 5) because b's operator has a more specific interface
+							</code></div>
+
+							But if there is no more-specific dispatch, you can define the function <code>resolveOperatorConflict</code>
+								to decide which operand's operator to use in a conflict.
+
+							<div class=example><code>
+								var resolveOperatorConflict = fn
+									a! x  b! y  operator:
+										ret x
+
+								var c = a+b ; c gets 5 (rather than 1) because resolveOperatorConflict chooses a's operator
+							</code></div>
+
+							Its also easy to inherit resolution functions from other modules like this:
+
+							<div class=example><code>
+								var someModule = load['someModule']
+
+								var resolveOperatorConflict = fn
+									a! x  b! y  operator:
+										ret x
+									other...:
+										ret someModule.resolveOpConflict[other...]
+							</code></div>
+
+							Furthermore, if the operators for both operands uses <code>var</code> or <code>var?</code>
+								typed parameters, the operator defined by the lvalue will be used. This is called 'weak dispatch'
+								in Lima.
+
+							<div class=example><code>
+								var a = {
+									operator[+] = fn other:
+										ret 'a'
+								}
+								var b = {
+									operator[+] = fn other:
+										ret 'b'
+								}
+
+								var c = a+b ; c gets 'a', since 'a' is the lvalue here
+							</code></div>
+
+							Lastly, in order to change this behavior, you can define a function called
+								<code>resolveWeakOperatorConflict</code> (that has the same form as
+								<code>resolveOperatorConflict</code>), which you can use to decide to use the rvalue in
+								cases like this if you need to.
+
+							<div class=example><code>
+								var resolveWeakOperatorConflict = fn
+									x y operator:
+										ret y
+
+								var c = a+b ; c gets 'b' (rather than 'a') because resolveOperatorConflict choose b's operator
 							</code></div>
 						</p>
-						
+
+						<h4>Restrictions</h4>
 						<p>The following operators can't be overloaded: 
 							<ul><li> : </li>
 								<li> :: </li>
 								<li> ?? </li>
 								<li> | </li>
-								<li> Any operator ending in = other than basic assignment <code>=</code> (eg += or !=) </li>
+								<li> .= </li>
 								<li> [= ] (and any variation of [[= ]] or [[[= ]]] etc</li>
 								<li> ~ (and all variations of ~~, ~~~, etc)</li>
 								<li> ~> (and all variations of ~~>, ~~~>, etc)</li>
@@ -1359,31 +1479,48 @@
 						</p>
 						
 						<h4>Overloading the dot operator</h4>
-						<p>	The dot operator is special case in a couple different ways:
-							<ul><li>Tho it's a binary operator, it is always defined where the defining object is the Lvalue.
-								</li>
-								<li>It has access to the name on the right side, if the right side is a simple name
-								</li>
-							</ul>
+						<p>	The dot operator is special case because while it's a binary operator, it is always defined
+								where the defining object is the Lvalue.
 						</p>
-						<p> Overloading the dot operator would be done like this:
-							<div><code>
-								operator[ . ] = fn <span class=Rvalue>name</span> <span class=Rvalue>value</span>:
+						<p> Overloading the dot operator would usually be done like this:
+							<div class="codeBox"><code>
+								operator[ . ] = fn varWord <span class=Rvalue>variable</span>:
+									var name = meta[variable].name
 									; statements
 							</code></div>
-							
-							Where <code>name</code> contains the name on the right side, or nil if the right side isn't a simple name, 
-								and <code>value</code> contains the value of the right side, or nil if the right side is a name but not a defined variable.
+
+							Where the <code>varWord</code> is a type that matches any named value, but won't match if the
+								right side isn't a simple name.
+						</p>
+						<p> But you can also overload the dot operator to be able to access the passed value, like a
+								normal operator.
+							<div class="codeBox"><code>
+								operator[ . ] = fn <span class=Rvalue>value</span>:
+									return value + 2
+							</code></div>
+						</p>
+						<p> And you can combine those as well:
 							<div class=example><code>
 								var someObject = {
-									operator[ . ] = fn name value:
-										wout['name: '(name|'no name')', value: '(value|'no value')]
+									operator[ . ] = fn
+									 varWord variable:
+										; note that the variable might be undeclared and so this would be an error in that case
+										var temp = variable + 2
+
+										var name = meta[variable].name
+										wout['name: 'name]
+
+										; you can even set the variable, which would implicitly declare it if its in an object scope
+										; but would throw an exception otherwise
+										variable = 5
+									 var value:
+										wout['value: 'value]
 								}
 							
 								var x = 5
-								someObject.x		; prints "name: x, value: 5"
-								someObject.(1+2)	; prints "name: no name, value: 3"
-								someObject.y		; prints "name: y, value: no value"
+								someObject.x		; prints "name: x"
+								someObject.(1+2)	; prints "value: 3"
+								someObject.y		; prints "name: y"
 							</code></div>
 							
 							Note that macros passed into the dot operator don't need to use the reference-access operator
@@ -1443,10 +1580,9 @@
 						</p>
 						
 						<p>	The bracket operators are the only operators that can be overloaded with macros (although the dot operator can return a macro).
-							It must be set with <code>rawMacro</code>, since it only gets once string argument - the characters between the brackets (whatever type of brackets they may be).
 							<div class=example><code>
 								var object = {
-									operator [ [ ] =  rawMacro input:
+									operator [ [ ] =  macro input:
 										ret input.split[','].map[ int.parse[v[[c: !{' ' ''@}.has[c] ]]] ].sort[v]
 								}
 								
@@ -1473,20 +1609,22 @@
 				</tr>
 				
 				<tr><td>
-						operator[else] = function
+						operator[else] = fn operator args:
+							...
 						
-						preOperator[else] = function
+						preOperator[else] = fn ...
 						
-						postOperator[else] = function
+						postOperator[else] = fn ...
 					</td>
-					<td><p>	Defines a catch-all operator handler.
-							The function should take one parameter - the operator potentially being operated with.
-							If the operator is intended to be applicable to the object, 
-								the function should return an object with two members that looks like 
-								<code>{int order  fn! operation}</code>
-								where <code>order</code> is the operator precedence, and <code>operation</code>
-								is a function of the form that would normally be used to overload an operator.
-							The function should return nothing (<code>nil</code>) if the operator is not applicable.
+					<td><p>	Defines a fallback, catch-all operator handler.
+							The <code>operator</code> parameter is the operator represented as a string, and the
+								<code>args</code> are the list of arguments the operator receives (one for unary operations,
+								two for binary, and potentially more for bracket operations).
+							The function should return an object to delegate operation to, or <code>nil</code> to indicate
+								that the object can't execute the operation.
+							The returned object can be the object the fallback is defined in, the other operand, or
+								some other object entirely.
+							This can be used to do generalized predicate dispatch.
 						</p>
 					</td>
 				</tr>
@@ -1734,8 +1872,46 @@
 								
 								<p>	Function values have the following methods defined for them:
 									<table class="definitionTable innerBorder">
+										<tr><td>
+                                                fn.raw
+                                                    match arguments:
+                                                        statements...
+                                                        ret transformedArguments
+                                                    run transformedArguments:
+                                                        statements...
+
+                                                fn.raw[
+                                                    ...
+                                                ]
+    										</td>
+											<td><p>	Returns a function that <code>match</code>es and transforms some input arguments
+                                                    and then <code>run</code>s some statements using the transformed arguments.
+                                                    The <code>match</code> argument should be a function that takes in a list of
+                                                    function parameters and returns either nil if the arguments don't match, or an
+                                                    object with the following parameters if the arguments do match:
+                                                    <ul><li>argInfo - A value to pass into <code>run</code></li>
+                                                        <li>weak - If true, means the arguments are considered "weak" for the purposes of operator dispatch.</li>
+                                                    </ul>
+
+                                                    Note that the parameters <code>arguments</code> and <code>transformedArguments</code>
+                                                    are simple names and cannot be typed or defaulted. Also, `match` must come first,
+                                                    and `run` second.
+                                                    <div class=example><code>
+                                                    var add1 = fn.raw
+                                                        match arguments:
+                                                            if arguments.len == 1:
+                                                                ret {argInfo: arguments[0]  weak:false}
+                                                        run arg:
+                                                            ret arg+1
+
+                                                    wout[add1[2]] ; prints 3
+                                                    add1[2 3]     ; throws an exception because the arguments don't match
+                                                    </code></div>
+												</p>
+											</td>
+										</tr>
 										<tr><td>sideEffectLess</td>
-											<td><p>	Returns a function that produces no side effects. 
+											<td><p>	Returns a function that produces no side effects.
                                                     The output behavior (return value) is preserved.
 													Values pointed to by input parameters (including the calling object) may still be changed.
 												</p>
@@ -1967,7 +2143,7 @@
 			
 			<tr><td style="width:80px;">
 					<span class=macro></span>
-					 <span class=word>charsInside</span> <span class=word>charsBefore</span>:
+					 <span class=word>rawInput</span> <span class=word>startColumn</span>:
 						<span class=statements></span>
 					
 					<span class=macro></span>
@@ -1975,80 +2151,58 @@
 					]
 				</td>
 				<td><p>	A <span class=macro></span> function definition.
-						Macros must expect two string <span class=argument>arguments</span> that each get code passed into the macro call.
-						<span class=word>charsInside</span> gets the characters that occur between the outer brackets of the function definition 
-							(for <span class=bracketBlock>bracket-blocks</span>) or between the colon and the first non-whitespace character that 
-							does not have a greater indentation then the line the macro call begins (for <span class=indentationBlock>indentation-blocks</span>).
-						<span class=word>charsBefore</span> gets the characters found after the function name and before the first bracket 
-							(for <span class=bracketBlock>bracket-blocks</span>) or colon (for <span class=indentationBlock>indentation-blocks</span>)
-							- whichever comes first.
-						Inside the <span class=macro></span> function declaration,
-							the programmer must define how to translate a function call into "real" lima - maybe using Lima's <span class=parse></span> function.
-							
-						Note that when a macro created with <span class=macro></span> is called, it must have an
-                             open bracket and closed bracket or be called with a colon.
-                        If called with a colon, any lines that have equal or less indentation than the start of the expression the 
-                            call is part of are treated as not part of the call.
+						Macros must expect a single string <span class=argument>argument</span> that gets code passed
+						into the macro call.
+						<span class=word>rawInput</span> is the string of all the characters that come after it as a
+							parameter, up until one of the characters isn't indented at least one space from expression
+							the macro is called in and that line doesn't start with an end-bracket, end-curly-brace,
+							or end-paren.
+						<span class="word">startColumn</span> is the zero indexed column number
+							(relative to the expressions indentation level) the first character of the input starts at.
+							For example, if <span class="word">startColumn</span> is 5, then <code>input.split[@''][1][5]</code>
+							is vertically aligned with <code>input[0]</code>
+					</p>
+					<p>	Inside the <span class=macro></span> function declaration,
+							the programmer must define how to translate a function call into "real" lima - eg by using
+							Lima's <span class=parse></span> function.
 					</p>
                     <p> A macro must return an object with two properties:
-                        <ul><li>return - the value to return from the macro</li>
-                            <li>charsConsumed - the number of characters of <code>charsIndside</code> consumed by the macro.</li>
+                        <ul><li>consume - The number of characters of <code>rawInput</code> consumed by the macro.</li>
+							<li><p>run[input] - A parameterless function to execute when the macro is to be executed. Gets the input consumed as its argument.
+								</p>
+								<div class="elaboration">
+									Execution is done separately from determining the number of consumed characters because
+									execution doesn't necessarily happen in some cases, for example when the macro
+									is used as a default parameter value for a parameter set that doesn't match the
+									arguments.
+								</div>
+							</li>
                         </ul>
                     </p>
-					<p>	A macro needs to be followed by the ~ operator if it needs to be used without being called.
+
+					<div class="example">
+						<p>The <span class="word">startColumn</span> can be used to allow defining behavior based on
+							vertical alignment between the first line and subsequent lines. For example:
+						</p>
+						<div class="codeBox"><code>
+						myMacro a:   ret a
+						        a b: ret b
+						</code></div>
+					</div>
+					<p>	A macro value must be followed by the ~ operator to be accessed without its macro being evaluated.
 					</p>
 
-					<p>	<table>
-							<tr><td style="width:80px;">
-									<span class=word>customName</span>...[...]
-									<span class=word>customName</span>...:...
-										...
-								</td>
-								<td><span class=macro>Custom</span> function calls.
-									Must begin with the function-name, must have a right-bracket (<code>[</code>) or colon (<code>:</code>) sometime after the function name, 
-										and must end with a left-bracket (<code>]</code>) or <span class=undentedCharacter></span>.
-									<span class="copiedNote customFunctionElipsis">
-										The <code>...</code> here is denoting any amount of characters, as long as the first character in the first argument isn't a 
-											letter or number (because then it would add to the name of the variable).
-									</span>
-								</td>
-							</tr>
-						</table>
-					</p>
-				</td>
-			</tr>
-			
-			<tr><td style="width:80px;">
-					<span class=rawMacro></span>
-					 <span class=word>characters</span>:
-						<span class=statements></span>
-					
-					<span class=rawMacro></span>
-					[	<span class=more></span>
-					]
-				</td>
-				<td><p>	Just like a normal <span class=macro></span> function, except that it doesn't require the call to have a colon or brackets.
-						It simply gets the string of all the characters that come after it as a parameter, up until one of the characters isn't indented
-							at least one space from expression the macro is called in.
-					</p>
-                    <p> A rawMacro must return an object with two properties:
-                        <ul><li>return - the value to return from the macro</li>
-                            <li>charsConsumed - the number of characters of <code>characters</code> consumed by the macro.</li>
-                        </ul>
-                    </p>
 					<table>
 						<tr><td style="width:80px;">
-								<span class=word>rawMacroName</span>...
+								<span class=word>macroName</span>...
 							</td>
-							<td>A <span class=rawMacro>Real custom</span> function call.
+							<td>A <span class=macro>macro</span> call.
 								<span class=customFunctionElipsis></span>
 							</td>
 						</tr>
 					</table>
 				</td>
-			</tr>
-			
-
+			</tr>			
 		</table>
 		
 	</div>
@@ -2360,12 +2514,6 @@
 				</td>
 			</tr>
 		</table>
-		
-		<p>	Ambiguities can arise when defining postfixes with more than two characters.
-			For exampe, if the postfix <code>xa</code> is defined, a value like <code>8xac9b</code> is ambiguous
-				(because of the postfix <code>x</code>).
-			In these cases an exception is thrown and your code should be refactored to resolve the ambiguity.
-		</p>
 	</div>
 	
 			
@@ -2836,14 +2984,15 @@
 					</td>
 				</tr>	
 				
-				<tr><td>+= -= *= /= etc</td>
-					<td>Any operator ending in a single <code>=</code> is defined as the assignment of a value to
-							some operation of itself with an expression.
-						For example, <code>a+=b</code> is equivalent to <code>a = a + b</code>.
-						Another example, <code>a%$^%=b</code> is equivalent to <code>a = a %$^% b</code>.
-						The exception to this is that <code>!=</code> does not translate to <code>a = a ! b</code> but rather
-							to <code>!(a == b)</code>.
-						Can't be chained.
+				<tr><td>+= -= *= /=
+						&= $= !$=
+						&&= $$= !$$=
+						|= ||=
+					</td>
+					<td>All of these operators are compound assignment operators where the lvalue is set to the lvalue
+							and rvalue operated on with the operator without the <code>=</code> at the end.
+						For example, <code>a+=b</code> is equivalent to <code>a = a+b</code>, and
+							<code>a|=b</code> is equivalent to <code>a = a|b</code>.
 					</td>
 				</tr>
 				<tr><td><span class="Ivalue"></span> .= <span class="Rvalue"></span></td>
@@ -2966,11 +3115,6 @@
 					<td>The number of elements in the list.											
 						This member cannot be set(written to).
 						Is undefined for objects that aren't lists (any object that has had keys modified or added that aren't between 0 and list.len inclusive).
-					</td>
-				</tr>
-				<tr><td>peeklen</td>
-					<td>The number of elements in the list at the time the code is called. 
-						This allows you to get the current length of a list even if its still being populated or is infinitely long.
 					</td>
 				</tr>
 				<tr><td>keys</td>
@@ -3170,7 +3314,7 @@
 								used to map keys to values is the integer return value of the object's <code>hashcode</code> property.
 						</p>
 					</td>
-				</tr>							
+				</tr>
 				<tr><td>has</td>
 					<td>x</td>
 					<td>Tests if the object contains <span class="Rvalue">x</span>, where x is some lima expression.
@@ -3479,7 +3623,7 @@
 						<p class=example>
 							<code>
 							{1 2 3}.map[v*5]	; will return {5 10 15}
-							{1 2 3}.map[{2 3 4 5}.has[v]].join[a&amp;b] 	; asks if every member in the list is either 2, 3, 4, or 5 
+							{1 2 3}.map[{2 3 4 5}.has[v]].join[a&amp;b] 	; asks if every member in the list is either 2, 3, 4, or 5
 							{false true true}.join[a&b]	; is equivalent to the above (thus it will return false, since 1 isn't in the list). 
 							{1 2 3}.map[{2 3 4}.has[v]].join[a$b]	; similarly, this asks if any member in the list is either 2,3,4, or 5 (so this will return true).
 							</code>
@@ -3919,10 +4063,6 @@
 										Errors if the array is empty.
 									</td>
 								</tr>
-								<tr><td>none</td>	
-									<td>Returns an empty <code>bits</code> object.
-									</td>
-								</tr>
 							</table>
 						</p>
 						
@@ -4174,7 +4314,7 @@
 				Instead, Lima does a combination of both: it uses its own abstract character encoding derived from Unicode,
 					but extended to allow representations of characters from any other encoding inside the same string.
 			</p>
-			<p> Strings are abstract entities containing "characters" that are conceptually encoding independant.
+			<p> Strings are abstract entities containing "characters" (aka graphemes) that are conceptually encoding independent.
 				In practice, like anything else in Lima, the internals will likely choose different encodings for 
 					different situations, using the advantages of different encoding when it makes sense.
 				See the description of limaEnc8 (in the <i>Predefined Variables: Character Encodings</i> section)
@@ -4237,12 +4377,25 @@
 						The same as a single quoted string except double-quotes can be part of the string and single-quotes can't.
 					</td>
 				</tr>
+				<tr><td>`<span class=characters></span>`</td>
+					<td>A <code>string</code> literal quoted with grave accents.
+						The same as a single quoted string except grave accents can't be part of the string.
+					</td>
+				</tr>
 				<tr><td>"""<span class=characters></span>"""</td>
 					<td>A triple quoted <code>string</code> literal. 
 						The same as a single quoted string except double-quotes and single-quotes can be part of the string.
 						Also note that if a triple-quoted string ends in more than 3 triple-quotes in a row, the *last* three
 							are the end of the triple quote. 
 						For example, <code>"""x"""""</code> is the same thing as <code>'x""'</code>.
+					</td>
+				</tr>
+				<tr><td>'''<span class=characters></span>'''</td>
+					<td>A triple quoted <code>string</code> literal, pretty much the same as <code>"""</code>.
+					</td>
+				</tr>
+				<tr><td>```<span class=characters></span>```</td>
+					<td>A triple quoted <code>string</code> literal with grave accents, pretty much the same as <code>"""</code>.
 					</td>
 				</tr>
 				<tr><td>#<span class=lvalue>literalString</span></td>
@@ -4315,10 +4468,6 @@
 					<tr><td>@<span class=lvalue>string</span></td>
 						<td><p>	Returns the string with a newline at the front.
 								<code>@"string"</code> is like <code>"/nstring"</code> in C.
-							</p>
-							<p>	Really <code>@"</code> and <code>@'</code> are additional custom-operators that
-									create a string literal with a newline at the front.
-								But they follow the same pattern.
 							</p>
 						</td>
 					</tr>
@@ -4551,12 +4700,6 @@
 						</table>						
 					</td>
 				</tr>
-				<tr><td>bits</td>	
-					<td>A type conforming to the structure of the <code>number.bits</code> object, 
-                         which is an array of boolean values, that also has special methods and operators for bit operations.
-                        The type requires the same num, ones, twos, none, dec, chunk, and dechunk members as the output of something like <code>5.bits</code>.					
-					</td>
-				</tr>
 				<tr><td class=nearTop><span class=string></span></td>	
 					<td>Variables of this type hold a lima string. Has the following members:
 						<table>
@@ -4680,7 +4823,7 @@
 														Returns a <code>bits</code> object.
 													</p>
 													<p>	If a character in the string can't be encoded by this encoding,
-															it should call the function contained in the attribute <code>encodingFail</code>.
+															it should call the function contained in the <code>atr.encodingFail</code>.
 														<span class="encodingFail"></span>
 														The <code>enc</code> method should *never* throw an exception when a character can't be encoded, 
 															although <code>encodingFail</code> can decide to throw an exception.
@@ -4729,6 +4872,14 @@
             					</td>
             				</tr>
             			</table>
+					</td>
+				</tr>
+
+				<tr><td><span class=word>varWord</span></td>
+					<td>Represents a named variable.
+						This can be used to match named variables, including undeclared variables, in operator dispatch.
+						See "Overloading the dot operator" for an example.
+						It isn't generally useful as a variable type outside the area of operator dispatch.
 					</td>
 				</tr>
 				
@@ -4857,14 +5008,20 @@
 							</table>
 						</td>
 					</tr>
-					<tr><td>function</td>
-						<td><table class="definitionTable">
-								<tr><td>!</td>
-									<td><p>	See the section on function for details.
-										</p>
-									</td>
-								</tr>
-							</table>
+					<tr><td>fn!</td>
+						<td>See the section on functions for details.
+						</td>
+					</tr>
+					<tr><td>ref!</td>
+						<td>See the section on <code>ref</code> for details.
+						</td>
+					</tr>
+					<tr><td>file!</td>
+						<td>See the section on <code>file</code>> for details.
+						</td>
+					</tr>
+					<tr><td>dir!</td>
+						<td>See the section on <code>dir</code> for details.
 						</td>
 					</tr>
 				</table>
@@ -4981,33 +5138,22 @@
 									</td>
 								</tr>
 								<tr><td><span class=bracketOperator></span></td>
-									<td><p>	Returns a reference type that can reference the passed type.
-											<div class=example><code>
-												ref[int] x       ; reference to an integer
-												ref[int$real]     ; reference to an int or real
-											</code></div>
-											
-											<span class=dotOperatorWithTypeParameter></span>
-										</p>
-									</td>
-								</tr>
-								<tr><td><span class=doubleBracketOperator></span></td>
-									<td>Returns a value that, when copied, copies to a reference of the input value. 
-										This can be useful for returning references from a function, creating lists of references, 
+									<td>Returns a value that, when copied, copies to a reference of the input value.
+										This can be useful for returning references from a function, creating lists of references,
 											and can be important in cases where function arguments are mutated and may be either
 											references or non-references.
 										<div class=example><code>
 											var a = 5
 											var b = 6
 											var x ~> a         ; x points to a
-											var y = ref[[b]]   ; y points to b
-											var z = {ref[[a]] ref[[b]]}	; z gets a list of references
-											
+											var y = ref[b]   ; y points to b
+											var z = {ref[a] ref[b]}	; z gets a list of references
+
 											var func = fn one two three:
 												one ~> b
-												two = ref[[b]]
-												ret ref[[three]]	; returns a reference, same as three~
-													
+												two = ref[b]
+												ret ref[three]	; returns a reference, same as three~
+
 											; here, result gets a reference to a,
 											; x gets pointed to b instead of a, and
 											; z[0] doesn't change, but a gets pointed to b
@@ -5015,130 +5161,148 @@
 										</code></div>
 									</td>
 								</tr>
-							</table>
-							
-							<h4>Reference objects</h4>
-							<p> Reference objects pass all accesses through to the object it points to, except for the following operators:
-							</p>
-							
-							<table class="definitionTable innerBorder">
-								
-								<tr><td><span class="Rvalue"></span>~</td>
-									<td><p>	Reference access operator. 
-											An operator that accesses a reference itself, as opposed to as what it points to 
-												(what usually happens).
-											You would use this to return a reference from a function, 
-												put a reference into an object immediate, or point one reference to another.
+								<tr><td><span class=doubleBracketOperator></span></td>
+									<td><p>	Returns a reference type that can reference the passed type.
 											<div class=example><code>
-											X = fn:
-												int r=5
-												ref! x
-												x ~> r	; x points to r
-												
-												var A = {reference: x~} ; an object that contains a reference
-												wout[A.reference] 		; outputs 5
-												ret A.reference~ 		; returns the reference to r
+												ref[[int]] x       ; reference to an integer
+												ref[[int$real]]    ; reference to an int or real
 											</code></div>
-										</p>
-										<p> The more <code>~</code>'s in the operator, the farther down in to the reference chain it accesses.
-											<div class=example>
-												<code>x~~</code> would access the reference x points to (like *ptr in C). 
-												<code>x~~~</code> would mean to use the reference that the reference x points to, points to (like **ptr in C), etc. 
-												More examples:
-												<div class="codeBox">
-													<code>
-														int: r=5 t=36
-														ref!: x y
-														x ~> r	; x points to r
-														y ~> x~ ; y points to x
-														y ~~> t ; x is repointed to t
-														var A = {x~ y~ y~~}	; A is a list that contains the three references (x, y, and x again [what y points to])
-														ret A[1]~~	; returns the reference to t (y holds a reference to a reference to t)
-													</code>
-												</div>
-											</div>
-										</p>
-										
-										<p>	This is also used to indicate that you want to use an <span class=attribute></span> or <span class=macro>macro</span>
-												rather than call it on the proceding code. 
-											For example,
-											<div class="codeBox"><code>
-											{int~ real~ var~} 	; building an object that contains type attributes
-											function[if~ df~]	; passing the core macros <code>if</code> and <code>df</code> into a method
-											</code></div>
-										</p>
-										<p>	Variables can be set to references, but as usual it creates a copy.
-											<div class=example><code>
-												var[x=5 y=6]
-												var ptr ~> x
-												var a = ptr~	; a now also points to x, but it is a copy
-												ptr ~> y		; ptr points to y, but a still points to x
-												wout['ptr: 'ptr', and a: 'a]	; prints 'ptr: 6, y: 5'
-											</code></div>
-										</p>
-										<p>	Using the ~ operator on an object that isn't a reference, 
-												<span class=attribute></span>, or <span class=macro>macro</span>
-												returns the object itself (ie a no-op) except that it no longer has the ~ operator.
-											This means that while <code>5~</code> is legal, <code>5~~</code> will throw an exception.
-										</p>
-									</td>
-								</tr>
-								<tr><td><span class="Lvalue"></span> ~> <span class="Rvalue"></span></td>
-									<td><p>Sets the reference that a ref points to. 
-											The number of tildes (~'s) tell you how "deep" the assigning goes. 
-											<div class="example">
-												<code>
-												ref.ref.int a
-												ref.int[b c]
-												int[x y]
-												b ~> x		; b now points to x
-												a ~> b		; a now points to x (since b points to x)
-												a ~~> y		; this sets whatever a points to (i.e. b), to now point to y
-												c ~> b~		; c now points to what b points to (i.e. y).
-												</code>
-											</div>
-										
-											<span class=arrowOperatorChaining></span>
-										</p>
-										<p>	Note that multiple tildes in this operator works the same way as the unary ~ operator.
-											<div class="example"><code>
-												a ~~> b
-												; means the same as:
-												a~ ~> b
-												
-												a ~~~> b
-												; means the same as:
-												a~ ~~> b
-												; and
-												a~~ ~> b
-											</code></div>	
 											
-											Also note that <code>x~ = y~</code> is the same as <code>x ~> y~~</code> if x and y are both normal references.
+											<span class=dotOperatorWithTypeParameter></span>
 										</p>
 									</td>
 								</tr>
 							</table>
 						</p>
+
+						<p> Has the following methods:
+							<table class="methodDefinitionTable innerBorder">
+								<tr><td>weak</td>
+									<td>value</td>
+									<td>Just like <code>ref[value]</code>, but is a <a href='http://en.wikipedia.org/wiki/Weak_reference'>weak reference</a>.
+										A variable will implicitly get a strong-reference if it isn't declared as a weak reference.
+										All weak references are nilable, so assigning a weak reference to a <code>ref!</code> variable will
+											make your type-checker complain.
+
+										<div class=example><code>
+											var x = 5
+											var p ~> x            ; strong reference
+											ref p2 ~> x           ; another strong reference
+											var p3 = ref.weak[x]  ; weak reference
+											var p4 ~> ref.weak[x] ; p4 gets a strong reference here
+										</code></div>
+
+										When an object that a weak-reference is destroyed, it is automatically set to <code>nil</code>
+									</td>
+								</tr>
+							</table>
+						</p>
+							
+						<h4>Reference objects</h4>
+						<p> Reference objects pass all accesses through to the object it points to, except for the following operators:
+						</p>
+
+						<table class="definitionTable innerBorder">
+
+							<tr><td><span class="Rvalue"></span>~</td>
+								<td><p>	Reference access operator.
+										An operator that accesses a reference itself, as opposed to as what it points to
+											(what usually happens).
+										You would use this to return a reference from a function,
+											put a reference into an object immediate, or point one reference to another.
+										<div class=example><code>
+										X = fn:
+											int r=5
+											ref! x
+											x ~> r	; x points to r
+
+											var A = {reference: x~} ; an object that contains a reference
+											wout[A.reference] 		; outputs 5
+											ret A.reference~ 		; returns the reference to r
+										</code></div>
+									</p>
+									<p> The more <code>~</code>'s in the operator, the farther down in to the reference chain it accesses.
+										<div class=example>
+											<code>x~~</code> would access the reference x points to (like *ptr in C).
+											<code>x~~~</code> would mean to use the reference that the reference x points to, points to (like **ptr in C), etc.
+											More examples:
+											<div class="codeBox">
+												<code>
+													int: r=5 t=36
+													ref!: x y
+													x ~> r	; x points to r
+													y ~> x~ ; y points to x
+													y ~~> t ; x is repointed to t
+													var A = {x~ y~ y~~}	; A is a list that contains the three references (x, y, and x again [what y points to])
+													ret A[1]~~	; returns the reference to t (y holds a reference to a reference to t)
+												</code>
+											</div>
+										</div>
+									</p>
+
+									<p>	This is also used to indicate that you want to use an <span class=attribute></span> or <span class=macro>macro</span>
+											rather than call it on the proceding code.
+										For example,
+										<div class="codeBox"><code>
+										{int~ real~ var~} 	; building an object that contains type attributes
+										function[if~ df~]	; passing the core macros <code>if</code> and <code>df</code> into a method
+										</code></div>
+									</p>
+									<p>	Variables can be set to references, but as usual it creates a copy.
+										<div class=example><code>
+											var[x=5 y=6]
+											var ptr ~> x
+											var a = ptr~	; a now also points to x, but it is a copy
+											ptr ~> y		; ptr points to y, but a still points to x
+											wout['ptr: 'ptr', and a: 'a]	; prints 'ptr: 6, y: 5'
+										</code></div>
+									</p>
+									<p>	Using the ~ operator on an object that isn't a reference,
+											<span class=attribute></span>, or <span class=macro>macro</span>
+											returns the object itself (ie a no-op) except that it no longer has the ~ operator.
+										This means that while <code>5~</code> is legal, <code>5~~</code> will throw an exception.
+									</p>
+								</td>
+							</tr>
+							<tr><td><span class="Lvalue"></span> ~> <span class="Rvalue"></span></td>
+								<td><p>Sets the reference that a ref points to.
+										The number of tildes (~'s) tell you how "deep" the assigning goes.
+										<div class="example">
+											<code>
+											ref.ref.int a
+											ref.int[b c]
+											int[x y]
+											b ~> x		; b now points to x
+											a ~> b		; a now points to x (since b points to x)
+											a ~~> y		; this sets whatever a points to (i.e. b), to now point to y
+											c ~> b~		; c now points to what b points to (i.e. y).
+											</code>
+										</div>
+
+										<span class=arrowOperatorChaining></span>
+									</p>
+									<p>	Note that multiple tildes in this operator works the same way as the unary ~ operator.
+										<div class="example"><code>
+											a ~~> b
+											; means the same as:
+											a~ ~> b
+
+											a ~~~> b
+											; means the same as:
+											a~ ~~> b
+											; and
+											a~~ ~> b
+										</code></div>
+
+										Also note that <code>x~ = y~</code> is the same as <code>x ~> y~~</code> if x and y are both normal references.
+									</p>
+								</td>
+							</tr>
+						</table>
+						<p> See also: <code>weakRef</code>.
+						</p>
 					</td>
 				</tr>
-				
-				
-				<tr><td>weakRef</td>
-					<td>Just like <code>ref</code>, but is a <a href='http://en.wikipedia.org/wiki/Weak_reference'>weak reference</a>.
-						A variable will implicitly get a strong-reference if it isn't declared as a weak reference.
-						All weak references are nullable, and so the <code>?</code> type-operator doesn't exist for <code>weakRef</code> type-object.
-						
-						<div class=example><code>
-							var x = 5
-							var p ~> x  ; strong reference
-							ref p2 ~> x ; another strong reference
-							weakRef p3 ~> x    ; weak reference
-							weakRef p4 ~> nil
-						</code></div>
-						
-						When an object that a weak-reference is destroyed, it is automatically set to <code>nil</code>
-					</td>
-				</tr>		
 				
 				<tr><td>meta</td>
 					<td>Object with methods for reflection and meta programming.
@@ -5146,16 +5310,6 @@
 						
 						<h5>Methods:</h5>
 						<table class="methodDefinitionTable innerBorder">
-							<tr><td><span class=postExclamationOperator></span></td>	
-								<td></td>
-								<td>Returns a type that can only hold a <code>meta</code> object 
-									(an object returned by <code>meta</code>'s bracket operator).
-								</td>
-							</tr>
-							<tr><td>?</td>	
-								<td></td>
-								<td>Returns type that can hold a <code>meta</code> object or <code>nil</code>.
-							</tr>
 							<tr><td><span class=bracketOperator></span></td>
 								<td><span class=lvalue>object</span></td>
 								<td>Returns an object containing meta data about the passed <span class=lvalue>object</span>.
@@ -5452,12 +5606,32 @@
 					</td>
 				</tr>
 				
-				<tr><td><span class=process></span></td>
+				<tr><td class="nearTop"><span class=process></span></td>
+					The process object is only available in the entry point module and any information from it needed
+						by other functions or modules must be passed to them.
+
 					<td>Members:						
 						<table class="definitionTable innerBorder">
 							<tr><td>name</td>	
 								<td>Name of the command used to invoke the program. 
 									This is the value you get in <code>main</code>'s <code>argv[0]</code> in C.
+								</td>
+							</tr>
+							<tr><td>args</td>
+								<td>A list of the command-line arguments to the program.
+
+									<div class="example open"><code>
+										wout['Sum: ' process.args[0]+process.args[1]]
+									</code></div>
+								</td>
+							</tr>
+							<tr><td>signals</td>
+								<td>A list of signals sent to the program.
+
+									<div class="example open"><code>
+										change[process.signals]:
+											wout["Got a new signal: "process.signals.sort[-k][0] ''@]
+									</code></div>
 								</td>
 							</tr>
 							<tr><td>stack</td>
@@ -5490,7 +5664,9 @@
 								<td>Time the program started running.</td>
 							</tr>
 							<tr><td>end</td>	
-								<td>Time the program will end (used for describing things that should last til the end of the process).</td>
+								<td>Time the program will end (used for describing things that should last til the end of
+									the process).
+								</td>
 							</tr>
 							<tr><td>vendor</td>	
 								<td>Name of the maker of the compiler or interpreter.</td>
@@ -6947,18 +7123,18 @@ Caused by:
 				
 				
 				<tr><td>
-						atry:
+						asyncTry:
 							<span class=statements>primaryStatements</span>
 						 
 						 ; <span class="tryExceptionBlock forceComment"></span>
 						 <span class=word>exception</span>:	 	
 							<span class=statements>handlingStatements</span>							
 							
-						atry [
+						asyncTry [
 							<span class=more></span>
 						]
 					</td>
-					<td><p> Asynchrounous try-catch. Catches and handles exceptions thrown from threads (does not catch synchronous exceptions). 
+					<td><p> Asynchronous try-catch. Catches and handles exceptions thrown from threads (does not catch synchronous exceptions).
 							This is similar to <a href="http://nodejs.org/api/domain.html">domains in node.js</a>.
 						</p>					
 						<p>	Runs <code>primaryStatements</code>, and if any exception is <code>throw</code>n from threads in those statements, 
@@ -6967,11 +7143,11 @@ Caused by:
 						</p>							
 						<p>	This construct uses the <code>uncaughtExceptionHandler</code> attribute, and so has the same familiar nesting 
 								behavior as normal <code>try</code>.
-							Like <code>try</code>, <code>atry</code>'a main block doesn't define a new scope, so variables declared inside it persist beyond the atry block.
-							However, <code>atry</code>'s exception block *does* define a new scope.
+							Like <code>try</code>, <code>asyncTry</code>'a main block doesn't define a new scope, so variables declared inside it persist beyond the asyncTry block.
+							However, <code>asyncTry</code>'s exception block *does* define a new scope.
 						</p>
 						
-						<p>	When an exception is thrown from an atry block, 
+						<p>	When an exception is thrown from an asyncTry block,
 								the exception that triggered the try block is appended to the <code>causes</code> list
 								of the newly thrown exception.
 						</p>
@@ -7186,7 +7362,7 @@ Caused by:
                                 Note that this doesn't (by itself) ensure that the statement has completed after that line.
 								Like most lima code, it really returns a lazily calculated value 
 									- meaning that code will only block when it needs a value inside <code>val</code> to continue.
-								This property can only be set once, and throw an exception if set again. 
+								This property can only be set once, and throws an exception if set again.
                             </li>
                             <li><code>wait: statements</code> - A macro that runs the <code>statements</code>
 									only after all inputs and outputs inside the original statement are complete.									
@@ -7386,7 +7562,8 @@ Caused by:
 				<tr><td>uncaughtExceptionHandler</td>
 					<td>Holds function that is run in cases of uncaught exceptions.
                         It takes a single argument that should be an exception object.
-						This attribute is used by <code>atry</code>.
+						This attribute is used by <code>asyncTry</code> and is the function called when an exception reaches
+							the top of a thread's stack without being caught.
 					</td>
 				</tr>
 				
@@ -7441,7 +7618,7 @@ Caused by:
 							<tr><td>atr.encodingFail</td>
 								<td>encoding character</td>	
 								<td><span class="copiedNote encodingFail">
-										<code>encodingFail!</code> takes the <code>encoding</code> object and the character that couldn't be encoded 
+										<code>encodingFail</code> takes the <code>encoding</code> object and the character that couldn't be encoded
 											as parameters, and the character it returns should be encoded in its place.
 									</span>
 									The default of this attribute is a function that throws an encoding exception.
@@ -7697,7 +7874,7 @@ Caused by:
 				
 				<tr><td>dosText</td>
 					<td><span class=word>encodingName</span></td>
-					<td>This encoding handles windows-specific file encoding.
+					<td>This encoding handles windows-specific file encodings.
 						When encoding, this first encodes with the encoding named <span class=word>encodingName</span>,
 							then converts regular newlines to dos newlines and adds the end-of-file characters (ascii value 26)
 							at the end of the file. 
@@ -7740,6 +7917,12 @@ Caused by:
 				</tr>
 				<tr><td><span class=bool></span></td>
 					<td>Boolean values (0 and 1).
+					</td>
+				</tr>          
+				<tr><td>bits</td>
+					<td>A type conforming to the structure of the <code>number.bits</code> object,
+                         which is an array of boolean values, that also has special methods and operators for bit operations.
+                        The type requires the same num, ones, twos, none, dec, chunk, and dechunk members as the output of something like <code>5.bits</code>.
 					</td>
 				</tr>
 				<tr><td><span class=int></span></td>	
@@ -9607,7 +9790,7 @@ Caused by:
 				<tr><td>mag</td>
 					<td>value</td>
 					<td>Returns the magnitude of a value. 
-						The value can be any number (int, flo, real, complex, etc), or vector of numbers.
+						The value can be any number (int, real, complex, etc), or vector of numbers.
 						It should be noted that this function is equivalent to the absolute value when used on non-vector numbers.
 					</td>
 				</tr>
@@ -9859,7 +10042,7 @@ Caused by:
 			<table class="definitionTable">
 
 				<tr><td><span class=wout></span></td>
-					<td>Function that writes some information (by default to stdout).
+					<td>Writes some information (by default to stdout).
 						<code>wout[x]</code> is short for <code>atr.infoHandler[x]</code>.
 						Can also print one argument without brackets, e.g. <code>wout "hello"</code>
 					</td>
@@ -9907,7 +10090,7 @@ Caused by:
 							 12:  doSomethingElse[]
 							 else: cond v%10 > 5
 							  4:  doSomething[]
-							 else: doSomethingElse[]
+							  else: doSomethingElse[]
 
 							; renaming the condition parameter
 							cond x:: x.has[4]
@@ -10402,7 +10585,8 @@ Caused by:
 				<tr><td>with <span class=word>variable1</span> <span class=word>variable2</span> ...:
 							<span class=statements></span>
 					</td>
-					<td>A <code>with</code> block creates a new isolated scope that only passes through the ability to modify the specified variables.
+					<td>A <code>with</code> block creates a new isolated scope that only passes through the ability to
+							access the specified variables.
 						The return value of the statements are returned from the <code>with</code> call.
 						Allows a programmer to easily section off blocks of code that are relatively independent,
 							which can make it a lot easier to refactor later, especially if you want to turn those blocks into separate functions.
@@ -10410,9 +10594,9 @@ Caused by:
 							var x=1, y=2, z=3
 							var result = with x y:
 								var c = 3
-							   	wout[x]  ; works fine
-							   	wout[z]  ; doesn't work
-							   	return x+y+c
+								wout[x]  ; works fine
+								wout[z]  ; doesn't work
+								return x+y+c
 							wout[c] ; doesn't work because the c defined inside the with block isn't in scope
 						</code></div>
 
@@ -12581,40 +12765,67 @@ Caused by:
 	<div class="mainBox mainTitle" sectionTitle="Things to mention somewhere">
 		<div class="codeBox" pretty="no">
 
-		Maybe remove the main function and allow multiple entrypoints by calling methods in the resulting module.
-			This would requiring having some way to access the console args and signals as module-scope variables.
-
-		What happens when you have an accessor object and want to directly access it within the object:
-
-		var o = {
-			a_ = 0
-			a = access[get: ret a_ set x: a_=x]
-
-			f = fn:
-				a = 4 ; What happens here? Answer: there is no a
-				ret a+5 ; or here?
-		}
-
-
-		Write a concept about dependency injection using attributes.
+		Make a note that default parameter values and parameter types are evaluated on each function call,
+			not on function definition.
+		Also make a note that any macros inside function parameters may be evaluated even if those parameters don't end up
+			matching the arguments, because otherwise the system couldn't always know what the actual parameters are.
+		Non-macro expressions (eg as types or default values) are only evaluated if the parameters match.
 
         The meta properties need to have multiple scopes - one for each inherited object.
         Question: should you be able to modify those scopes in lima? Probably not.
         If not, mix must be a core macro because it needs to create those scopes.
 
-		Maybe make macro the same as rawMacro
-
-		change object 'static' to 'block' or something..
-
 		Think about what `this` should do in an object definition space. Should it access the object containing the function its being run in? If so, maybe have self['prop'] to access own properties while you're building the object.
 
-		Maybe pull in the number formatting from future into a standard number formatting module
+		move fn.parse and var.parse into a separate object. Note that they'll need to have some additional parameters (at least the context):
+			parse.fn
+			parse.obj
 
+		probably move ALL IO to the standard library (and out of core), since pretty much all IO is machine/OS dependent
+
+		think more about the 'inputs', 'keyboard', and 'touch' objects and how they relate. keyboard and touch, at least, shouldn't be core probably.
+
+		Probably separate out most the encodings stuff into a separate module in the standard library
+
+		Consider a weak reference operator. Maybe ~>> or maybe ~|>
+
+        Maybe make it so . and : can't be combined with other operator symbols so you don't have issues doing things like a!.values and x...:
+
+		Maybe extend cast to somehow work on all types. Cast would constrain the type of an object to something, so it could be set to a variable with a more constrained type. (see cast in stanza)
+
+		Should types in a function's parameter list only be evaluated when the function is executed? If its done that way,
+			it would mean that you could use the interface of the object the method is contained in as a type inside the method
+			parameters.
+
+		If you make it so that functions evaluate the characters consumed for all macros in its body at function definition time,
+			then maybe introduce the concept of a macro consumption interface, which defines the number of characters
+			consumed by a macro. Using this, you could allow macros to be passed into or returned from functions and those macros
+			actually used inside the function as long as the consumption interface was identical. Example"
+
+			fn fn~! functionMacro:
+				var pseudoFunction = functionMacro a:
+					ret a
+				fn~! pseudoIf = getSomeMacro[]
+				pseudoIf pseudoFunction[5] == 5: // Assumes pseudoFunction has a bracket operator, although the macro
+					wout['ok!']					 // interface doesn't require that.
+					
 		== Conventions ==
 
 		! as the interface operator
 
 		Write conventions about implicit variable somewhere (a, b, k, v, c, ak, and bk). Probably add a conventions section.
+
+		Write a convention item about blocks. Also, then, add information to the section on macro defining exactly how much input
+			a macro can take in.
+
+        Ranges: inclusive or exclusive?
+
+		== concepts ==
+
+		Write a concept about dependency injection using attributes.
+
+		probably write a concept about list `len` and how to get a list's current length while its building using asynchronous
+			code (`thread`).
 
         == How will types work? ==
 
@@ -12628,43 +12839,9 @@ Caused by:
 		When a variable is passed into a function as an argument, the function's dispatch list has type checking
 			functions that check the arguments to see which dispatch list matches.
 
-        == weak dispatch operator binding ==
-
-        In order to make operators not ambiguous when both operands define the same operator, you might need to have some kind of weak
-            dispatch binding where it'll use that dispatch function only if the other object doesn't have a dispatch match. If neither have
-            strong dispatch matches, run both operations and make sure they evaluate to the same value
-
-        var a = {
-          operator[==] = fn
-           int y:
-            ret this.number == y
-           string y:
-            ret this.number.str == y.str
-           else var y: ; weak binding
-            ret false
-        }
-
-        var b = {
-          operator[==] = fn
-           int y:
-            ret this.num+2 == y
-           else var y: ; weak binding
-            ret false
-        }
-
-        if a!=b:
-          wout["yup they're not equal"]
-
-
-		If two weak operators clash, rather than erroring, choose the left operand and use its dispatch.
-
-		You might have to treat any operator dispatch items with only var or var? types as weak dispatch. Otherwise you might have clashing operators a lot unless they're typed.
-
-		Maybe attempt to make a determination about whether one parameter dispatch list is a strict supertype (subset) of another, and if you can determine that use the one that's the supertype (because its more specific).
-
-		= fallback operator (else) =
-
-		Maybe just have it return an object to delegate to. That way you can either delegate to another existing object, or you can create a new object (with the appropriate operator) and return that new object.
+		Note that type macros have to have kinda weird functionality to properly support being used in parameters.
+		They have to respect an attribute that tells them to go into "parameter mode" and not evaluate default values,
+			which need to be deferred until its decided the parameter set is the matching one.
 
 		== variance ==
 
@@ -12688,8 +12865,8 @@ Caused by:
 		2. Less obvious - you can't correctly type a reference to a supertype when you want to point it to a list of subtypes for writing only. Here's an example of that
 
 		list[fra] a = {1.1 2.2 3.3}
-		ref[list[int]] b ~> a ; errors because a contains values that aren't fra values
-		b.=ins[3]               ; even tho all b wants to do is insert integers
+		ref[list[int]] b ~> a  ; errors because a contains values that aren't fra values
+		b.=ins[3]              ; even tho all b wants to do is insert integers
 
 		There are a couple solutions to this:
 		A. Don't do anything - allow the runtime error and leave it at that
@@ -12713,41 +12890,6 @@ Caused by:
 
 
 		In the variance debate, stanza takes the stand that covariance is the usual use case (reading) and that the type-checker won't yell about contravariance until a case of writing to an array of the wrong type actually occurs. Perhaps Lima should assume covariance unless the parameter is tagged with the writeonly type.
-
-		== implementation thoughts ==
-
-        All the operator overloading stuff is probably implementable via meta, and so are all types probably.
-        Throw and while can probably be implemented with jump
-
-		In javascript, exceptions will probably need to be creatively used to make jump work correctly in longjump situations.
-
-        Attributes are easy to implement until you need to consider asynchronous behavior. Without asynchronous behavior, an attribute could be a simple global variable that's set at the start, and its original value replaced at the end. However, in any place where an asynchronous continuation might start, a pointer to what the attribute currently points to must be made and that attribute reset in thread-local global scope at the start of that thread.
-
-		== other ==
-
-		* move 'change' back to being a standard macro, and mention that it's implemented using macro[o].history
-
-        * Figure out how you might do something like observee.info(someValue).set(...) perhaps some kind of attribute?
-
-		* How would you do something like bluebird cancellation?
-			* I think I might want to add the ability to trigger a throw of an exception at whatever arbitrary part of a thread's continuation
-			* That way, you can throw a cancellation exception from any process (even tho this could be unsafe depending on the case)
-                and catch the exception somewhere in that same thread (or outside of the thread if it reaches the top of the stack).
-			* Atomic blocks would prevent an exception from being triggered while its statements are resolving
-			* Also, you could run a section of code with sideEffectLess (or isolate, or similar), making throwing an exception anywhere completely safe.
-				* Perhaps you can have a low level, unsafe mechanism for general throwing from a thread, and have a function that does this using isolate
-				  which does it completely safely
-			* This reasoning basically was already included in the "justifications" file
-                 
-        * optimize needs to have a way to specify things like "optimize this for the 80% most likely inputs"
-
-
-		Dev resource bundle:
-		* source map
-		* exception messages - anything from an exception that's not switched off of but instead printed out to the screen. Messages sent to a server could process the messsages using the dev bundle.
-
-		Maybe extend cast to somehow work on all types. Cast would constrain the type of an object to something, so it could be set to a variable with a more constrained type. (see cast in stanza)
-
 
 		== var might need to be a superclass type of everything ==
 
@@ -12773,40 +12915,50 @@ Caused by:
 		int x
 		f[x] ; this shouldn't get stopped by a type checker
 
-		== make ==
-		* partial implementation of make (missing some necessary things - can't remember what at the moment: unmake?)
+		== implementation thoughts ==
+
+        All the operator overloading stuff is probably implementable via meta, and so are all types probably.
+        Throw and while can probably be implemented with jump
+
+		In javascript, exceptions will probably need to be creatively used to make jump work correctly in longjump situations.
+
+        Attributes are easy to implement until you need to consider asynchronous behavior. Without asynchronous behavior, an attribute could be a simple global variable that's set at the start, and its original value replaced at the end. However, in any place where an asynchronous continuation might start, a pointer to what the attribute currently points to must be made and that attribute reset in thread-local global scope at the start of that thread.
+
+		Operator definitions should throw an exception if the operator is already defined and `overload` isn't used.
+
+		=== make ===
+
+        How is something like `make` inherited or overridden? If you inherit from an object that has defined `make` and you want to override it, what do you do? If you don't mix in the bracket operator, the object returned by your new `make` won't have the originally defined bracket operator. Maybe store the original bracket operator in a property called `make` so an overriding `make` can grab it when it knows its overriding (which it could know if an `override` macro was used but not if the operator simply wasn't mixed in.
 
 		Maybe make needs to override the interface operator so that the interface will have the correct args for the bracket operator that make overrides.
 
-		Question, how does the make function handle a situation where the bracket operator is defined after make is run? Are operators constant? Can you write a duplicate operator assignment without error? Maybe make has to be a core construct that waits til the end of the object to run.
+        == Logging/messaging ==
 
-		var make = macro input:
-		  varparse:
-			seq[ lima.ws '['
-			  alt[lima.fnBody seq['unmake' lima.ws ':' lima.superExpression.many]
-			]
-		 var scopeObject ~> callingScope.this
-		 var originalBracketOp = meta[scopeObject].operators['[']
-		 meta[scopeObject].operators['['] = ret fn:
-		   var x = scopeObject
-		   meta[x].operators['['] = originalBracketOp
-		   callback[x]
-		   ret x
+        Probably have a standard logging module and written-down logging conventions so most people are doing it in a consisten way.
+        * Should provide similar information as an exception (module its from, file its from, line/column, etc)
+        * Caller should provide some kind of logging level (probably just an arbitrary string (that strongly recommends using the conventional debug/info/warn/error levels), an error code/type (another arbitrary string) that is intended to be static (maybe this would be better as an enum the module exports as part of its API), and additional error information (completely arbitrary).
+        * Code that calls functionality from its dependencies could then catch those messages and handle them appropriately, possibly doing things other than logging (for example cancelling that inner process and doing something else, which couldn't easily be done by simply throwing an exception (since the inner module could catch and ignore that))
 
-		* OLD partial implementation of make (missing some necessary things - can't remember what at the moment)
-			var make = fn:
-			  var scopeObject ~> callingScope.this
-			  var originalBracketOp = meta[scopeObject].operators['[']
-			  meta[scopeObject].operators['['] = ret fn:
-				var x = scopeObject
-				meta[x].operators['['] = originalBracketOp
-				callback[x]
-				ret x
+		== other ==
 
+		* move 'change' back to being a standard macro, and mention that it's implemented using macro[o].history
 
-		Maybe get rid of the 'flo' type.
+        * Figure out how you might do something like observee.info(someValue).set(...) perhaps some kind of attribute?
+
+		* How would you do something like bluebird cancellation?
+			* I think I might want to add the ability to trigger a throw of an exception at whatever arbitrary part of a thread's continuation
+			* That way, you can throw a cancellation exception from any process (even tho this could be unsafe depending on the case)
+                and catch the exception somewhere in that same thread (or outside of the thread if it reaches the top of the stack).
+			* Atomic blocks would prevent an exception from being triggered while its statements are resolving
+			* Also, you could run a section of code with sideEffectLess (or isolate, or similar), making throwing an exception anywhere completely safe.
+				* Perhaps you can have a low level, unsafe mechanism for general throwing from a thread, and have a function that does this using isolate
+				  which does it completely safely
+			* This reasoning basically was already included in the "justifications" file
+                 
+        * optimize needs to have a way to specify things like "optimize this for the 80% most likely inputs"
+
    		
-		</code></div>
+		</div>
 	</div>
 	
 	Last Updated: 2018-09-03
@@ -13038,7 +13190,6 @@ Caused by:
 			"override",
 			"parse",
 			"macro",
-			"rawMacro",
 			"this"
 		]
 		var literalWordsB = 

@@ -2401,6 +2401,11 @@
 				
 				== FEATURE FREEZE (things to think about, but not to implement in the first version) ==
 
+        Make sure you're doing characters/graphemes correctly:
+        * site.icu-project.org/home
+        * http://userguide.icu-project.org/intro
+        * https://en.wikipedia.org/wiki/International_Components_for_Unicode
+
 		An alternative object creation macro that allows property reordering so you can define things in logical groupings
 		without worrying about where their dependencies are defined. This requires an explicity way to figure out which
 		properties each statement is defining (which isn't generally possible in a normal object). Eg every defined property
@@ -2481,6 +2486,8 @@
 
 
 		== other ==
+
+		Maybe pull the number formatting into a standard number formatting module
 
         Maybe allow overriding ~ and ~> if you inherit from a reference: {mix[someRef~]}
 
@@ -2988,10 +2995,14 @@
 		* get rid of the concept of 'raised' exceptions (or whatever you want to call them) that get answered by an "answer" block
 			* instead use the attribute concept to set a method that can be called somewhere within (effectively getting an "answer" that way)
 			* write a concept about this (mentioning that raise-answer was a feature i had originally considered)
-			
-			
-			
-		* maybe for pack, some kind of public key or other identifying information sohuld be saved with the executable so that the 
+
+		Dev resource bundle:
+		* source map
+		* exception messages - anything from an exception that's not switched off of but instead printed out to the screen. Messages sent to a server could process the messsages using the dev bundle.
+
+
+			   
+		* maybe for pack, some kind of public key or other identifying information should be saved with the executable so that the
 			canonical source can be validated (authenticated) when its downloaded by the end user 
 		* how do you determine that for pack, that the package you download is correct 
 			* have a checksum to verify the contents
@@ -3018,7 +3029,7 @@
 		  						* this would be useful if you lost your private key
 
 
-		Hooks for intercepting output and injecting input (from the console, network, OS, etc)
+		--nix: this is already done using attributes, but write a concept about it-- Hooks for intercepting output and injecting input (from the console, network, OS, etc)
 			* this is so you don't have to do as much mock-object bullshit, you can simply test inputs and outputs
 
 		* For graphics, I like the setup of objects having subobjects, and when you draw one object, it automatically draws all 
