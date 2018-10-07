@@ -480,7 +480,7 @@
 							(autoboxing is incompatible with the ideas of pass-by-reference and typeless values).
 					</span>
 				</li>
-				<li><h5>Build-in package management</h5>
+				<li><h5>Built-in package management</h5>
 					Each source file fully describes its dependencies (with the help of a "package.lima" file),
 						and can automatically download and use the needed files.
 					That way you never have to manually download and install *any* external package! Ever!
@@ -660,96 +660,376 @@
 					(tho not all things there are necessarily flow-control).
 			</p>
 		</div>
+
 		
-		
-		<div class="subBox1" sectionTitle="Blocks">
-			<p>	All of the flow control constructs can either be written using square-brackets as block delimiters:		
-				<div class=codeBox><code>
-					if[
-					 i==5:
-						; do something
-					]
-				</code></div>
-					or with indentation (whitespace) as block delimiters:	
-				<div class=codeBox><code>
-					if
-					 i==5:
-						; do something
-				</code></div>
-			</p>
-			<p>	Bracket-delimited blocks work as expected and whitespace delimited blocks are more forgiving then their python counterparts.
-				Here's how they work: 
-				When a block is opened (by a macro name like <code>if</code>),
-					anything that is more indented than the line in which the block is opened is treated as inside the block.
-				Usually a block will have some data on which to operate preceding a colon.
-				And tabs aren't allowed to be used as indenting (although they are allowed for non-relevant whitespace).
-				
-				<div class=example><code>
-					if					; block opened
-					 i == 5:			; indented *further* than if (opening sub-block)
-					 	doSomething[]	; indented further than if (only indented further than the condition for easier reading ; )
-					 else:				; even else needs to be indented *further* than if
-					 	doSomeMoreStuff[]
-					 	
-					if x==5: if y<70:
-						doSomething[]	; this is run if x==5 & y<70
-					 y < 100:			
-						doSomeMore[]	; this is run if x==5 & y<100
-					; note that theres no way to add another condition on the first if - with x==5 without putting "if y<70" on a new line
-					
-					if i==5: doSomething[]
-					else: dontDoThis[]		; this is actually a syntax error because else isn't inside the if block
-					
-					
-					if i==5:
-						doSomething[]			; as ugly as this is, all 6 of these are in the same block, and is valid code
-							doSomething[]
-								doSomething[]
-					 doSomething[]
-					  doSomething[]
-					 doSomething[]
-					 
-					; more ugly but valid code
-					; only one of the function calls will happen
-					if i==5:
-					 doSomething[]			
-					 i<10:
-					 doSomething2[]	
-					 else:
-					 doSomething3[]
-								
-					 
-					; even more ugly but valid code
-					; this has the same behavior as the above example
-					if i==5:
-						doSomething[]			
-						i<10:
-							doSomething2[]	
-							else:
-								doSomething3[]
-				</code></div>
-			</p>
-			<p>	Personally I like delimiting blocks with whitespace,
-					but sometimes bracket delimited blocks are neccessary for reasonable code construction.
-				<div class=example><code>
-					; lima's alternative to C's ternary operator (?:)
-					var x = 'Lets '.cat[if[run: 'go running' else: 'walk'] ' to the park']
-					
-					; this would be silly (but possible):
-					var x = 'Lets '.cat[if run: 
-						'go running' 
-					 else: 
-						'walk'
-					' to the park' 	; note that for this to work, the value on this line must *not* be any more indented than this, otherwise it would be under the else
-					] 	
-					
-					; a shorter but still silly alternative:
-					var x = 'Lets '.cat[if run: 'go running' else: 'walk'
-					' to the park'] 	; the value on this line must still be no more indented than this
-				</code></div>
-			</p>
-		</div>
+		<div class="subBox1" sectionTitle="Blocks and Statements">
+            <p>In order to accommodate macros in a sane way, lima statements are structured in basic blocks where any subsequent
+                lines in a multi-line statement must be indented further than the first line is indented OR start with an ending
+                paren, bracket, or brace.
+            </p>
+            <div class=example><code>
+                ; `b` must be indented at least one space further than the beginning of the statement.
+                a +
+                 b
+
+                ; Again, b must be indented at least one space further than the first line of the statement (which
+                ; begins at `someFunction`).
+                someFunction[a +
+                 b]
+
+                ; In this case, the macro might only consume part of ` (potential macro input)` but will never consume any
+                ; of `(more source code)` since its not indented within the statement.
+                a + macro (potential macro
+                 input)
+                (more source code)
+
+                ; As long as subsequent lines in a statement are indented, the indentation doesn't matter.
+                a +
+                    b
+                 +
+                   c
+
+                ; End-brackets, end-parens, or end-braces can have the same indent while continuing the statement.
+
+                2 + someFunction[
+                 a
+                ] + anotherFunction[
+                 b
+                ]
+
+                a + (b
+                 + 2
+                ) + (
+                 2 * c
+                )
+
+                1 + {1 2
+                 3 4
+                 5 6
+                }[2]
+
+                ; `if` statement conditions must also be indented, including `else`.
+                if x:
+                  doSomething[]
+                 else:
+                  doSomethingElse[]
+
+                ; However, all the following are errors:
+
+                a +
+                b     ; This line is not part of the previous statement.
+
+                someFunction[
+                a             ; This line is not part of the function call.
+                ]
+
+                a * (
+                b+c  ; This line is not part of the previous statement.
+                )
+
+                if x:
+                 doSomething[]
+                else:             ; This line is not part of the if statement.
+                 doSomethingElse[]
+            </code></div>
+
+            <p>The indentation of a statement depends on what column that statement starts on (as opposed to the indent of the
+                first statement on that statement's line). So for lines with multiple separate statements, statements other than the
+                first statement have a different indentation level than the first statement.
+            </p>
+            <div class=example><code>
+                a+b  c+
+                      d  ; this is ok and is part of the logical statment `c+d`
+
+                ; This is an error.
+                a+b  c+
+                 d
+
+                ; And this is also an error, because `d` isn't indented *further* than the start of the statement `c+` makes up.
+                a+b  c+
+                     d
+            </code></div>
+
+            <p>Whitespace delimitation is more forgiving then their python counterparts. You're free to indent separate statements
+                without regard to how other statements within a given construct are indented. You can certainly produce ugly code
+                this way, but indentation is one technique that can help visually organize sections of code that have many
+                statements with interwoven relations.
+            </p>
+            <div class=example><code>
+                ; These 3 statements simply execute one after the other.
+                a=3
+                  b=4
+                 c=5
+
+                ; This is a list with 3 elements.
+                var x = {
+                   z+y
+                 x+w
+                     g+h
+                }
+            </code></div>
+
+
+            <p>Note that tabs aren't allowed to be used in Lima source files at all. Any tabs must be converted to spaces or
+                space-extension characters. The compiler and IDEs should help do this.
+            </p>
+
+            <p> These rules are the basic ways that limit how statements are chopped up, but there are other conventions used by
+                core and standard macros (like <code>if</code> or <code>fn</code>) that are detailed in the Conventions section below.
+            </p>
+        </div>
 	</div>
+
+    <div class="mainBox mainTitle" sectionTitle="Conventions">
+		<div class="subBox1" sectionTitle="Convention A: Macro Block Format">
+            <p>All of the core and standard flow control constructs can either be written using square-brackets as block delimiters:
+                <div class=codeBox><code>
+                    if[
+                     i==5:
+                        ; do something
+                    ]
+                </code></div>
+                    or with indentation (whitespace) as block delimiters:
+                <div class=codeBox><code>
+                    if
+                     i==5:
+                        ; do something
+                </code></div>
+            </p>
+            <p> The indentation delimited style will end the statement it's used in, while the bracket delimited style can allow
+                the statement to continue.
+            </p>
+            <div class=example><code>
+                ; This is perfectly fine:
+                someFunction[if[
+                 x: 5
+                 else: 100
+                ] + 3]
+
+                ; There is no equivalent way to do that with whitespace delimitation. This causes an error:
+                someFunction[if
+                  x: 5
+                  else: 100
+                 + 3        ; Error.
+                ]
+
+                ; However this can work because while the white-space delimited if statement makes it impossible to continue the
+                ; statement being passed in as the first argument to someFunction (or passing more arguments), someFunction
+                ; can still continue once it closes.
+                someFunction[if
+                  x: 5
+                  else: 100
+                ] + 3
+            </code></div>
+
+            <p> Constructs that follow this convention always have at least one parameterized block. The parameters of the block
+                are some construct that ends in a colon ':'. The parameter might also start with a name. Each parameterized block
+                must have the exact same indentation as the other parameterized blocks, except one that starts on the same line
+                as the macro it is a part of. The statements inside each parameterized block must all be indented further than
+                the start of all the parameterized blocks in the macro construct.
+            </p>
+            <div class=example><code>
+                ; This is right:
+                if x:
+                  doSomething[]
+                 y:
+                  doSomething2[]
+                 else:
+                  doSomethingElse[]
+
+                ; This is also right, if ugly:
+                if
+                 x:
+                  doSomething[]
+                 y:
+                     doSomething2[]
+                 else:
+                   doSomethingElse[]
+
+                ; This is wrong:
+                if x:
+                 doSomething[]      ; This must be indented further than the `else:` below it.
+                 else:
+                   doSomethingElse[]
+
+                ; Also wrong, because all those `doSomething` statements aren't indented past the parameters.
+                if i==5:
+                 doSomething[]
+                 i<10:
+                 doSomething2[]
+                 else:
+                 doSomething3[]
+
+                ; Also wrong.
+                if i==5:
+                    doSomething[]
+                    i<10:
+                        doSomething2[]
+                        else:
+                            doSomething3[]
+            </code></div>
+
+            <p> The parameters for a parameterized block can be put on multiple lines in any way statements would be allowed to.
+                So in other words, each statement in the parameter can be over multiple lines as long as subsequent lines of the
+                statement are indented further than the start of the statement.
+            </p>
+            <div class=example><code>
+                ; This is right, if ugly:
+                if x
+                 + 2 > 4:
+                  doSomething[]
+                 y
+                     > 5:
+                  doSomething2[]
+                 else   :
+                  doSomethingElse[]
+
+                ; This is also right:
+                fn
+                 x
+                 y z=
+                    4:        ; Fugly but works, because the 4 is indented further than the start of the statement that begins with `z`.
+                  doSomething[]
+                 a
+                 b               ; Since `b` and `c` are separate statements from `a` (and each other), this is ok.
+                 c:
+                     doSomething2[]
+
+                ; This is wrong:
+                if
+                 x
+                 + 2 > 4:        ; This isn't part of the statement that starts with `x`.
+                  doSomething[]
+
+                ; This is also wrong:
+                if x
+                + 2 > 4:         ; This isn't even in the if statement.
+                  doSomething[]
+            </code></div>
+
+            <p> Some constructs might not have any parameters, but still require the colon ':' if they're using this convention.
+                This is an important part of this convention because it makes it unambiguous which pieces are statements and which
+                are parameters when dealing with the possibility of arbitrary macros (that might consume things like colons).
+            </p>
+            <div class=example><code>
+                var f = fn:     ; without requiring this colon, its wouldn't be clear whether the next line is a second parameter
+                 x:             ; block or a macro x that does something completely different.
+                    ret 5+x
+            </code></div>
+
+            <p> Some constructs using this convention have a named parameter block that just makes it clearer what that
+                parameter set does.
+            </p>
+            <div class=example><code>
+                var f = fn.raw
+                 match args:     ; here, "match" is the name of the parameter block, and `args` is the actual parameter.
+                    ret {
+                     argInfo: args
+                    }
+                 run argInfo:    ; here, "run" is the name of the parameter block, and `argInfo` is the actual parameter.
+                    ret 5+argInfo
+            </code></div>
+
+            <p>	Personally I like delimiting blocks with whitespace, but sometimes bracket delimited blocks are necessary
+                for reasonable code construction.
+                <div class=example><code>
+                    ; lima's alternative to C's ternary operator (?:)
+                    var x = 'Lets '.cat[if[run: 'go running' else: 'walk'] ' to the park']
+
+                    ; this would be silly (but possible):
+                    var x = 'Lets '.cat[if run:
+                        'go running'
+                     else:
+                        'walk'
+                    ' to the park' 	; note that for this to work, the value on this line must *not* be any more indented than this, otherwise it would be under the else
+                    ]
+
+                    ; a shorter but still silly alternative:
+                    var x = 'Lets '.cat[if run: 'go running' else: 'walk'
+                    ' to the park'] 	; the value on this line must still be no more indented than this
+                </code></div>
+            </p>
+        </div>
+
+        <div class="subBox1" sectionTitle="Convention B: Blocks With Multiple First-line Parameter blocks">
+            <p> Constructs using this convention can have multiple parameter blocks on the same line, but if a statement could either
+                be a normal statement or a new parameter block, it will be interpreted as a new parameter block.
+                This is mutually exclusive with Convention C.
+            </p>
+            <div class=example><code>
+                if[x: var a=x+5 ret a else: ret 10]
+
+                if x: var a = x+5
+                      ret a
+                   y: ret 6
+            </code></div>
+        </div>
+
+        <div class="subBox1" sectionTitle="Convention C: Blocks Without Multiple First-line Parameter blocks">
+            <p> Constructs where multiple parameters disallow multiple parameter blocks on the same line.
+                For example, <code>fn</code> does not allow multiple parameter blocks on the same line in order to avoid
+                possible ambiguity between statements from the last parameter block that could also be parameters for the next
+                parameter block. For example, <code>fn</code> does not allow multiple parameter blocks on the same line.
+                This is obviously mutually exclusive with Convention B.
+            </p>
+             <div class=example><code>
+                ; This isn't correct for `fn`. If `fn` allowed this, ambiguous cases like the following would be ambiguous:
+                var f = fn[a: a[] b=3 c d: ret b+c] ; Is b a statement that should be run for the first parameter block,
+                                                    ; or is b a parameter in a new parameter block with c and d (where 3 is its default
+                                                    ; value)? `fn` avoids this ambiguity by simply disallowing this.
+            </code></div>
+        </div>
+
+        <div class="subBox1" sectionTitle="Convention D: Macro Block First-line Evaluation">
+            <p> Constructs following this convention require that any macros that appear in the first line of a parent macro
+                be in scope when the parent is run, and that if the macro changes between run of the parent and run of the inner
+                macro, that the number of characters that the inner macro consumes is consistent. This convention is important for
+                constructs like <code>fn</code> or <code>if</code> that don't necessarily run the statements inside them immediately
+                (or ever).
+
+                <div class=codeBox><code>
+                    ; Even if `x` is false, `someMacro` must be in scope so that how many characters it consumes can be determined
+                    ; so the rest of the if can be properly parsed.
+                    if[x: someMacro --anotherVariable-- else: false]
+
+                    ; Similarly, `someMacro` here must also be in scope and be consistent.
+                    var x = fn[a: ret someMacro a][3]
+
+                    ; Even if `someMacro` is redefined in the function, it must be already defined before the function,
+                    ; otherwise the parser would not know what source code is part of the function.
+                    var x = fn[a: someMacro=getMacro[] ret someMacro a][3]
+                </code></div>
+            </p>
+        </div>
+
+        <div class="subBox1" sectionTitle="Convention E: Implicit Variables">
+            <p> There are a number of macro constructs that define implicit variables for accessing information about items
+                in an object.
+                These are defined to make it more convenient to write terse code.
+                For constructs with a single relevant item, the conventional variable names are:
+            </p>
+            <ul><li>v - The value.</li>
+                <li>k - The key that value is store in.</li>
+                <li>c - The count of the number of values that have been iterated through.</li>
+            </ul>
+            <p> For constructs with two relevant items, the conventional variable names are:
+            </p>
+            <ul><li>a - The first value.</li>
+                <li>b - The second value.</li>
+                <li>ak - The key that the first value is store in.</li>
+                <li>bk - The key that the second value is store in.</li>
+                <li>c - The count of the number of *pairs* of values that have been iterated through.</li>
+            </ul>
+
+            <p> For constructs that follow this convention, if the implicit variable would shadow or conflict with an in-scope
+                variable, an exception should be thrown. Similarly, if the implicit variable name is overriden with a name that is
+                already in scope, an exception should also be thrown.
+            </p>
+        </div>
+
+
+		Write conventions about implicit variable somewhere (a, b, k, v, c, ak, and bk). Probably add a conventions section.
+    </div>
 	
 	<div class="mainBox mainTitle" sectionTitle="Operators">
 			
@@ -1593,13 +1873,13 @@
 				</tr>
 				
 				<tr><td>
-						preOperator[ <span class="opsym"></span>
+						preOperator[
 							<span class="opsym"></span>
 						] = <span class=lvalue>function</span>
 
-						postOperator[ <span class="opsym"></span>
-							<span class="opsym"></span>
-						] = <span class=lvalue>function</span>
+						postOperator[
+                            <span class="opsym"></span>
+                        ] = <span class=lvalue>function</span>
 					</td>
 					<td><p>	Defining or overloading unary operators. 
 							Must not have any parameters.
@@ -1652,12 +1932,13 @@
 								[	<span class=more></span>
 								]
 							</td>	
-							<td><code>fn</code> is a macro that returns a function immediate (aka function object / nameless function / closure).
-								This is like nameless functions in javascript and is pretty similar to functions in C, java, or php.
+							<td><code>fn</code> is a macro that returns a function immediate (aka function object / nameless
+                                function / closure / lambda).
+                                This is like nameless functions in javascript and is pretty similar to functions in C, java, or php.
+                                This uses Conventions A, C, and D.
 								
 								<p>	The function's <span class=parameters></span> are defined as a <span class=blockParameter></span>
-                                         - an expression that either ends with a colon and a newline, 
-                                        or is surrounded by parens that end in a colon and newline. 
+                                         - an expression that either ends with a colon.
                                     For a function, the expression inside the <span class=blockParameter></span> is very similar to 
                                         an object's <span class=definitionBlock></span>.
                                         
@@ -1665,21 +1946,14 @@
 										<code>
 											var w = fn[
 											 a b c:	; a b and c are taken as params
+											  doSomethingWith[a b c]
 											]
 											
 											var x = fn [
-											 (a 
-												b c):	; a b and c are taken as params again
+											 a
+												b c:	; a b and c are taken as params again
+											  doSomethingWith[a b c]
 											]
-											
-											; this is a function that can take either no arguments, or
-											; two arguments (b and c)
-											; it does *not* have the parameter 'a'
-											var x = fn [
-											 a 
-												b c:	
-											]
-				
 										</code>
 									</div>
 									
@@ -2170,11 +2444,12 @@
                         <ul><li>consume - The number of characters of <code>rawInput</code> consumed by the macro.</li>
 							<li><p>run[input] - A parameterless function to execute when the macro is to be executed. Gets the input consumed as its argument.
 								</p>
-								<div class="elaboration">
+								<div>
 									Execution is done separately from determining the number of consumed characters because
 									execution doesn't necessarily happen in some cases, for example when the macro
 									is used as a default parameter value for a parameter set that doesn't match the
-									arguments.
+									arguments. Macros should not mutate external state outside of the <code>run</code>
+                                    function unless that is taken into consideration.
 								</div>
 							</li>
                         </ul>
@@ -3648,7 +3923,7 @@
 					<td>expression</td>	
 					<td><p>	AKA reduce or fold, <code>join</code> combines all the values in an object into one value.
 							The expression determines how to combine the elements of the list.
-							The <span class=implicitVariable></span>s in the expression are a and b.
+							The <span class=implicitVariable></span>s in the expression are <code>a</code> and <code>b</code>.
 							In the first combination, a holds the first elements and b holds the second element.
 							After the first combination, a holds the current aggregate, 
 								and b holds the next element to aggregate.
@@ -5321,7 +5596,7 @@
 														 Each key is a reference to one of the objects this object implements the interface of,
 															and each value is a map from original property name to aliased property name.
 										</li>
-										<li><b>operators</b> - An map from operator names to information about that operator.
+										<li><b>operators</b> - An map from binary operator names to information about that operator.
 											Each value is an object containing the properties:
                                             <ul><li><b>dispatch</b> - A list of objects representing the sub-functions that make up <code>fn</code>'s multiple dispatch list.
                                                     Each element contains the properties:
@@ -5336,7 +5611,6 @@
                                                     </ul>
                                                 </li>
                                                 <li><b>order</b> - The 'order' number used to determine operator precedence.</li>
-                                                <li><b>type</b> - Either 'prefix', 'postfix', or 'binary'. Bracket operators have the 'postfix' type.</li>
                                                 <li><b>backward</b> - If true, the operator is right-to-left associative (like <code>=</code>).
                                                                If false, the operator is left-to-right associative (the usual case for most operators).
                                                 </li>
@@ -5347,6 +5621,13 @@
                                             </ul>
                                             
                                             Note that <code>operators</code> has a macro bracket operator that can take in raw operator tokens in addition to string representations of the operator.
+										</li>
+										<li><b>preOperators</b> - An object representing prefix operators. Has the same form as
+                                                                  <code>operators</code> except won't contain the <code>order</code>,
+                                                                  <code>backward</code>, or <code>chains</code> properties.
+										</li>
+										<li><b>postOperators</b> - An object representing postfix operators. Has the same form as
+                                                                  <code>preOperators</code>.
 										</li>
 										<li><b>macro</b> - An object containing the properties:
 											<ul><li>macroAst - The function used to generate a macro's abstract syntax tree.</li>
@@ -12767,15 +13048,14 @@ Caused by:
 
 		Make a note that default parameter values and parameter types are evaluated on each function call,
 			not on function definition.
-		Also make a note that any macros inside function parameters may be evaluated even if those parameters don't end up
-			matching the arguments, because otherwise the system couldn't always know what the actual parameters are.
-		Non-macro expressions (eg as types or default values) are only evaluated if the parameters match.
 
         The meta properties need to have multiple scopes - one for each inherited object.
         Question: should you be able to modify those scopes in lima? Probably not.
         If not, mix must be a core macro because it needs to create those scopes.
 
 		Think about what `this` should do in an object definition space. Should it access the object containing the function its being run in? If so, maybe have self['prop'] to access own properties while you're building the object.
+
+        Leaning no: In python, any dedent must dedent to a previous indentation that has been written. Think about adding that constraint into Lima.
 
 		move fn.parse and var.parse into a separate object. Note that they'll need to have some additional parameters (at least the context):
 			parse.fn
@@ -12808,15 +13088,15 @@ Caused by:
 				fn~! pseudoIf = getSomeMacro[]
 				pseudoIf pseudoFunction[5] == 5: // Assumes pseudoFunction has a bracket operator, although the macro
 					wout['ok!']					 // interface doesn't require that.
-					
+
+        How would you do @visibleForTest in Lima? Should probably be something where only the current module can access private
+            properties. Maybe have a proscribed 'tests' folder where anything in there can access private properties. Or more flexibly
+            maybe in the package.lima have a place where you can list test folder paths under which lima files have access to private
+            properties.
+
 		== Conventions ==
 
 		! as the interface operator
-
-		Write conventions about implicit variable somewhere (a, b, k, v, c, ak, and bk). Probably add a conventions section.
-
-		Write a convention item about blocks. Also, then, add information to the section on macro defining exactly how much input
-			a macro can take in.
 
         Ranges: inclusive or exclusive?
 
