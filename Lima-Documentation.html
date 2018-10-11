@@ -265,9 +265,7 @@
 				myVariable = 'Hello?'  ; Assignment
 				int[x=8 y]             ; declaration and initialization
 				
-				z = 5 ; throws exception - no implicit variable declartions in functions
-				
-				bool can_underscores_be_used_in_variables=true   ; but probably shouldn't very often
+				z = 5 ; throws exception - no implicit variable declarations in functions
 				
 				GunIt[lastWords]       ; function call
 				
@@ -781,7 +779,8 @@
 	</div>
 
     <div class="mainBox mainTitle" sectionTitle="Conventions">
-		<div class="subBox1" sectionTitle="Convention A: Macro Block Format">
+		<div>
+            <h3>Convention A: Macro Block Format</h3>
             <p>All of the core and standard flow control constructs can either be written using square-brackets as block delimiters:
                 <div class=codeBox><code>
                     if[
@@ -951,10 +950,11 @@
             </p>
         </div>
 
-        <div class="subBox1" sectionTitle="Convention B: Blocks With Multiple First-line Parameter blocks">
+        <div>
+            <h3>Convention B: Blocks With Multiple First-line Parameter blocks</h3>
             <p> Constructs using this convention can have multiple parameter blocks on the same line, but if a statement could either
                 be a normal statement or a new parameter block, it will be interpreted as a new parameter block.
-                This is mutually exclusive with Convention C.
+                This is mutually exclusive with Convention C and is intended to be used in conjunction with Convention A.
             </p>
             <div class=example><code>
                 if[x: var a=x+5 ret a else: ret 10]
@@ -965,12 +965,13 @@
             </code></div>
         </div>
 
-        <div class="subBox1" sectionTitle="Convention C: Blocks Without Multiple First-line Parameter blocks">
+        <div>
+            <h3>Convention C: Blocks that Disallow Multiple First-line Parameter Blocks</h3>
             <p> Constructs where multiple parameters disallow multiple parameter blocks on the same line.
                 For example, <code>fn</code> does not allow multiple parameter blocks on the same line in order to avoid
                 possible ambiguity between statements from the last parameter block that could also be parameters for the next
                 parameter block. For example, <code>fn</code> does not allow multiple parameter blocks on the same line.
-                This is obviously mutually exclusive with Convention B.
+                This is obviously mutually exclusive with Convention B and is intended to be used in conjunction with Convention A.
             </p>
              <div class=example><code>
                 ; This isn't correct for `fn`. If `fn` allowed this, ambiguous cases like the following would be ambiguous:
@@ -980,12 +981,13 @@
             </code></div>
         </div>
 
-        <div class="subBox1" sectionTitle="Convention D: Macro Block First-line Evaluation">
+        <div>
+            <h3>Convention D: Macro Block First-line Parsing</h3>
             <p> Constructs following this convention require that any macros that appear in the first line of a parent macro
                 be in scope when the parent is run, and that if the macro changes between run of the parent and run of the inner
                 macro, that the number of characters that the inner macro consumes is consistent. This convention is important for
                 constructs like <code>fn</code> or <code>if</code> that don't necessarily run the statements inside them immediately
-                (or ever).
+                (or ever). This is intended to be used in conjunction with Convention A.
 
                 <div class=codeBox><code>
                     ; Even if `x` is false, `someMacro` must be in scope so that how many characters it consumes can be determined
@@ -1002,7 +1004,37 @@
             </p>
         </div>
 
-        <div class="subBox1" sectionTitle="Convention E: Implicit Variables">
+        <div>
+            <h3>Convention E: Parameter Block Macro Parsing</h3>
+            <p> Constructs following this convention require that any macros that appears in the parameter section of a parameter
+                block be in scope when the parent executes its inner statements (eg for a function, it executes its inner statements
+                when the function is called), and consume a consistent amount of source (similar to Convention D).
+                At the time the inner-statements are executed, the shallowest indent is found, and if any line with that
+                indentation starts with a parameter list (that ends in a colon) by using only definition-time macros, that
+                is determined to be the parameter indentation. If not, then the construct is assumed to have only the
+                first-line parameter and the rest of the lines are statements within that.
+
+                This is intended to be used in conjunction with Convention A.
+
+                <div class=codeBox><code>
+                    if x:
+                         doSomething[]
+                        y:               ; <- This line is the shallowest indent and matches a parameter list, so sets the
+                          doSomething2[] ;    parameter list indentation.
+
+                    if x:
+                       doSomething[]
+                      doSomething2[] ; This line is the shallowest indent, but doesn't have a colon, so everything other than `x:`
+                                     ; is treated like statements (which they are).
+                    if x:
+                      y:     ; These parameter blocks don't have statements, but can still be identified as parameter blocks.
+                      z:
+                </code></div>
+            </p>
+        </div>
+
+        <div>
+            <h3>Convention F: Implicit Variables</h3>
             <p> There are a number of macro constructs that define implicit variables for accessing information about items
                 in an object.
                 These are defined to make it more convenient to write terse code.
@@ -2172,11 +2204,11 @@
                                                     and `run` second.
                                                     <div class=example><code>
                                                     var add1 = fn.raw
-                                                        match arguments:
-                                                            if arguments.len == 1:
-                                                                ret {argInfo: arguments[0]  weak:false}
-                                                        run arg:
-                                                            ret arg+1
+                                                      match arguments:
+                                                        if arguments.len == 1:
+                                                          ret {argInfo: arguments[0]  weak:false}
+                                                      run arg:
+                                                        ret arg+1
 
                                                     wout[add1[2]] ; prints 3
                                                     add1[2 3]     ; throws an exception because the arguments don't match
@@ -2417,16 +2449,16 @@
 			
 			<tr><td style="width:80px;">
 					<span class=macro></span>
-					 <span class=word>rawInput</span> <span class=word>startColumn</span>:
+					 match <span class=word>rawInput</span> <span class=word>startColumn</span>:
+						<span class=statements></span>
+                     run <span class=word>input</span>:
 						<span class=statements></span>
 					
 					<span class=macro></span>
 					[	<span class=more></span>
 					]
 				</td>
-				<td><p>	A <span class=macro></span> function definition.
-						Macros must expect a single string <span class=argument>argument</span> that gets code passed
-						into the macro call.
+				<td><p>	A <span class=macro></span> definition.
 						<span class=word>rawInput</span> is the string of all the characters that come after it as a
 							parameter, up until one of the characters isn't indented at least one space from expression
 							the macro is called in and that line doesn't start with an end-bracket, end-curly-brace,
@@ -2436,24 +2468,20 @@
 							For example, if <span class="word">startColumn</span> is 5, then <code>input.split[@''][1][5]</code>
 							is vertically aligned with <code>input[0]</code>
 					</p>
-					<p>	Inside the <span class=macro></span> function declaration,
-							the programmer must define how to translate a function call into "real" lima - eg by using
-							Lima's <span class=parse></span> function.
+					<p>	Inside the <span class=macro></span> `match` statements,
+							the programmer defines how much of the <span class=word>rawInput</span> to consume -
+                            eg by using Lima's <span class=parse></span> function. It must then return an integer
+                            representing how many characters of <span class=word>rawInput</span> to consume.
+                        Execution is done separately from determining the number of consumed characters (in the `run`
+                            statements) because execution doesn't necessarily happen in some cases, for example when the macro
+                            is used as a default parameter value for a parameter set that doesn't match the
+                            arguments. Macros should not mutate external state in the <code>match</code>
+                            statements unless that is taken into consideration.
 					</p>
-                    <p> A macro must return an object with two properties:
-                        <ul><li>consume - The number of characters of <code>rawInput</code> consumed by the macro.</li>
-							<li><p>run[input] - A parameterless function to execute when the macro is to be executed. Gets the input consumed as its argument.
-								</p>
-								<div>
-									Execution is done separately from determining the number of consumed characters because
-									execution doesn't necessarily happen in some cases, for example when the macro
-									is used as a default parameter value for a parameter set that doesn't match the
-									arguments. Macros should not mutate external state outside of the <code>run</code>
-                                    function unless that is taken into consideration.
-								</div>
-							</li>
-                        </ul>
-                    </p>
+					<p>	The <span class=macro></span> `run` block gets the consumed source string as its
+                            <span class=word>input</span>, and the statements run in that block are statements to execute
+                            when the macro is to be executed.
+					</p>
 
 					<div class="example">
 						<p>The <span class="word">startColumn</span> can be used to allow defining behavior based on
